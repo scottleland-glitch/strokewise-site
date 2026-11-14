@@ -53,9 +53,8 @@
   .feat.stack .txt { max-width: 40em; width: 100%; }
   .feat.stack .phone { margin: 0 auto; }
   .feat.stack .phones { display: flex; justify-content: center; align-items: flex-start; gap: 18px; width: 100%; }
-  .feat.stack .phones .shot { max-width: 230px; flex: 1 1 0; margin: 0; }
+  .feat.stack .phones .shot { max-width: 300px; flex: 1 1 0; margin: 0; }
   .feat.stack .phones .phone { max-width: none; width: 100%; margin: 0; }
-  .feat.stack .phones .phone img { aspect-ratio: 780 / 1086; object-position: top; }
   .feat.stack .phones figcaption { text-align: center; font-size: 14.5px; font-weight: 600; color: var(--soft); margin: 12px 0 0; }
   .feat.stack .laptops { display: flex; justify-content: center; align-items: flex-start; gap: 18px; width: 100%; max-width: 900px; }
   .feat.stack .laptops .laptop { flex: 1 1 0; margin: 0; min-width: 0; }
@@ -97,6 +96,10 @@
     .feat.stack { gap: 28px; }
     .feat.stack .phones { justify-content: center; gap: 12px; overflow: visible; padding: 0; }
     .feat.stack .phones .shot { flex: 1 1 0; max-width: 200px; }
+    @media (max-width: 420px) {
+      .feat.stack .phones { flex-direction: column; align-items: center; }
+      .feat.stack .phones .shot { flex: none; width: 100%; max-width: 280px; }
+    }
     .feat.stack .laptops { flex-direction: column; align-items: stretch; max-width: none; width: 100%; gap: 16px; }
     .feat.stack .laptops .laptop { width: 100%; flex: none; }
     .feat.stack .laptops figcaption { margin-top: 8px; }
