@@ -98,7 +98,7 @@
     .feat.stack .phones .shot { flex: 1 1 0; max-width: 200px; }
     @media (max-width: 420px) {
       .feat.stack .phones { flex-direction: column; align-items: center; }
-      .feat.stack .phones .shot { flex: none; width: 100%; max-width: 280px; }
+      .feat.stack .phones .shot { flex: none; width: 100%; max-width: 250px; }
     }
     .feat.stack .laptops { flex-direction: column; align-items: stretch; max-width: none; width: 100%; gap: 16px; }
     .feat.stack .laptops .laptop { width: 100%; flex: none; }
@@ -174,16 +174,24 @@
       </figure>
     </div>
   </div>
-  <div class="feat">
-    <div class="phone"><img src="img/trends.webp" alt="Trends: score forecast with a likely range"></div>
+  <div class="feat stack" id="lost-vs-practice">
+    <div class="txt">
+      <span class="eyebrow">Strokes lost vs practice time</span>
+      <h2>Where you lose strokes vs where you practice</h2>
+      <p>Each skill has two bars: the share of strokes you lose, and the share of time you practice it. Putting can take most of the strokes you lose and almost none of the practice.</p>
+    </div>
+    <div class="phone"><img src="img/lost-vs-practice.webp" alt="Strokes lost vs practice time: short putts are 57% of lost strokes and 1% of practice"></div>
+  </div>
+  <div class="feat stack">
     <div class="txt">
       <span class="eyebrow">Trends</span>
       <h2>Where your game is heading</h2>
       <p>Trends learns how your practice turns into strokes and forecasts your next few weeks, with an honest range that narrows as you play more rounds.</p>
       <ul><li>"Holding steady around 76", "Improving – about 74 by March"</li><li>An early warning when one part of your game starts to slip</li></ul>
     </div>
+    <div class="phone"><img src="img/trends.webp" alt="Trends: score forecast with a likely range"></div>
   </div>
-  <div class="feat flip" id="practice">
+  <div class="feat stack" id="practice">
     <div class="txt">
       <span class="eyebrow">Practice plan</span>
       <h2>Practice what will lower your score</h2>
