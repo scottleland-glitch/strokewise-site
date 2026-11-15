@@ -167,7 +167,7 @@
     }
     function statsPage(uid) { return appPage(uid, 'stats', 'Stats', 'The app’s Stats screen: pick one round, the last 5 or all of them. Maps, putts, clubs, benchmarks.', function () { return AV.html.stats(); }); }
     function mygamePage(uid) { return appPage(uid, 'mygame', 'My Game', 'Shape of the game, benchmarks, forecasts with ranges, miss patterns. Same screen as the app.', function () { return AV.html.myGame(); }, true); }
-    function trendsPage(uid) { return appPage(uid, 'trends', 'Trends', 'How each area is moving week by week. Same screen as the app.', function () { return AV.html.trends(); }); }
+    function trendsPage(uid) { return appPage(uid, 'trends', 'Trends', 'Your athlete\'s score and each skill by week, with one dashed line for the next 3 weeks. Same screen as the app.', function () { return AV.html.trends(); }); }
     function planPage(uid) { return practiceNav(uid, 'plan') + appPage(uid, 'plan', 'Practice plan', 'What the app would have this athlete practice next, ranked by strokes lost. Same page as the app.', function () { return AV.html.practice(); }); }
     function comparePage(uid) { return appPage(uid, 'compare', 'Best and worst rounds', 'Two rounds side by side, or the best 5 against the worst 5.', function () { return AV.html.compare(); }); }
     function birdiePage(uid, id) { return back(uid, 'round/' + encodeURIComponent(id), 'Round') + pageHead('Birdie zone', 'How many more birdies a longer hole-out range would make.', '') + withAV(uid, function () { AV.setRound(id); var v = AV.view; if (!v.bz || v.bz.rid !== id) { v.bz = { scope: 'round', rid: id, from: 'summary', R: 0 }; v.bzD = null; } return '<div class="apphost">' + panel(AV.html.birdie(), 'full birdie') + '</div>'; }); }

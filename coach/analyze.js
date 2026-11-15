@@ -100,7 +100,7 @@
     var practiceOn = !(A.profile && A.profile.mode === 'stats');
     try {
       var TD = X.TR.build(rows.map(function (r) { return r.round; }), practiceOn ? X.MG.validPractice(A.practice || []) : [], X.SG, X.MG, { bl: P.bl, weeks: 26, tests: [], roundsOnly: !practiceOn, now: now });
-      var w = TD && TD.areas.filter(function (a) { return a.ok && a.heading && a.conf === 'high' && !named[a.k]; })[0]; // the forecast is only used once it has 10+ rounds behind it
+      var w = TD && TD.areas.filter(function (a) { return a.ok && a.heading && !named[a.k]; })[0]; // v218: the dashed line starts after 3 rounds (the app dropped the confidence levels)
       if (w) F.push({ tone: 'amber', kind: 'trend', text: CATS.filter(function (c) { return c.k === w.k; })[0].name + ' forecast: trending worse', to: 'trends' });
     } catch (e) {}
     if (trend.dir === 'worse' && trend.diff >= 1.5) F.push({ tone: 'red', kind: 'score', text: 'Score ↑ ' + trend.diff.toFixed(1) + ' vs the 5 rounds before', to: 'rounds' });

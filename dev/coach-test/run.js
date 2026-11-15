@@ -148,6 +148,7 @@ const checks = []; const ok = (name, cond, extra) => { checks.push([name, !!cond
   await p.click('.apphost [data-act=mgperiod][data-v=all]'); await p.waitForTimeout(400); ok('My Game period selector works and syncs the site’s period', /all time|All time/i.test(await p.textContent('.appui.mygame')));
   await p.screenshot({ path: OUT + '/09-mygame-1440x900.png' }); await p.screenshot({ path: OUT + '/09b-mygame-full.png', fullPage: true }); await p.click('.rhead [data-v="3m"]');
   await p.click('.atabs a:text-is("Trends")'); await p.waitForSelector('.appui.trends'); await p.waitForTimeout(400); ok('Trends page renders with forecast', (await p.$$('.appui.trends svg')).length >= 1);
+  { var trTxt = await p.innerText('.appui.trends'), trCards = await p.$$('.appui.trends .trcard2'); ok('Trends v218: one dashed line + a Why line under each chart, no range band or confidence', (await p.$$('.appui.trends path.trmid')).length >= 1 && (await p.$$('.appui.trends .trwhy')).length >= 1 && !(await p.$('.appui.trends .trband, .appui.trends .trconf')) && !/confidence|likely range|with more|with less/i.test(trTxt) && /Why:/.test(trTxt) && !/slip/i.test(trTxt), trCards.length + ' cards'); }
   await p.click('.apphost [data-act=trzoom] >> nth=1').catch(() => {}); await p.waitForTimeout(300);
   await p.screenshot({ path: OUT + '/09c-trends-1440x900.png' });
   await p.goto(BASE + '#/a/' + encodeURIComponent(J.uid) + '/compare'); await p.waitForSelector('.appui.compare'); ok('best vs worst rounds page renders', /Best|Worst/.test(await p.textContent('.appui.compare')));
