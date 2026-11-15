@@ -86,26 +86,35 @@
   function fmtSG(v, d) { if (v == null) return '–'; var s = Math.abs(v).toFixed(d == null ? 1 : d); return (Math.abs(v) < Math.pow(10, -(d == null ? 1 : d)) / 2 ? '' : v > 0 ? '+' : '−') + s; }
 
   // what needs a look: [{ tone: 'red' | 'amber' | 'blue', text }] – red first
-  function flagsOf(A, L, P, trend, tests, now, seenAt) {
+  // seen = { base, ids } – an item is New when it is newer than the first look (base) and has not been opened yet (ids)
+  function seenOf(o) { var s = o && o.seen; if (s) return { base: s.base || 0, ids: s.ids || {} }; return { base: (o && o.seenAt) || 0, ids: {} }; }
+  function freshOf(A, seen) { var out = { rounds: [], tests: [], practice: [] };
+    ['rounds', 'tests', 'practice'].forEach(function (k) { (A[k] || []).forEach(function (x) { if (k === 'tests' && x && !x.done) return; if (x && x.id && itemT(x) > seen.base && !seen.ids[x.id]) out[k].push(x); }); });
+    Object.keys(out).forEach(function (k) { out[k].sort(function (a, b) { return itemT(b) - itemT(a); }); }); return out; }
+  function flagsOf(A, L, P, trend, tests, now, seenIn) {
     var X = lib(L), F = [], rows = P.rows, last = rows[0];
     var S3 = shapeFor(A, L, '3m', now), named = {};
     // a skill clearly below the athlete's usual (their 20 rounds before this window; at least 6 of them, so a thin history can't trigger it)
     if (S3.prevCats && S3.prev.rounds >= 6 && S3.cur.rounds >= 4) S3.cats.forEach(function (c, i) { var p = S3.prevCats[i];
-      if (c.solid && p.value != null && (p.solid || (S3.prev.usual && p.n >= 4)) && c.value - p.value <= -0.75) { named[c.k] = 1; F.push({ tone: 'red', kind: 'skill', text: c.name + ' ' + fmtSG(c.value - p.value) + ' vs usual' }); } });
+      if (c.solid && p.value != null && (p.solid || (S3.prev.usual && p.n >= 4)) && c.value - p.value <= -0.75) { named[c.k] = 1; F.push({ tone: 'red', kind: 'skill', text: c.name + ' ' + fmtSG(c.value - p.value) + ' vs usual', to: 'skill/' + c.k }); } });
     var practiceOn = !(A.profile && A.profile.mode === 'stats');
     try {
       var TD = X.TR.build(rows.map(function (r) { return r.round; }), practiceOn ? X.MG.validPractice(A.practice || []) : [], X.SG, X.MG, { bl: P.bl, weeks: 26, tests: [], roundsOnly: !practiceOn, now: now });
       var w = TD && TD.areas.filter(function (a) { return a.ok && a.heading && a.conf === 'high' && !named[a.k]; })[0]; // the forecast is only used once it has 10+ rounds behind it
-      if (w) F.push({ tone: 'amber', kind: 'trend', text: CATS.filter(function (c) { return c.k === w.k; })[0].name + ' forecast: trending worse' });
+      if (w) F.push({ tone: 'amber', kind: 'trend', text: CATS.filter(function (c) { return c.k === w.k; })[0].name + ' forecast: trending worse', to: 'trends' });
     } catch (e) {}
-    if (trend.dir === 'worse' && trend.diff >= 1.5) F.push({ tone: 'red', kind: 'score', text: 'Score ↑ ' + trend.diff.toFixed(1) + ' vs the 5 rounds before' });
-    if (!rows.length) F.push({ tone: 'amber', kind: 'none', text: (A.rounds || []).length ? 'No finished rounds yet' : 'No rounds shared yet' });
-    else if (now - last.t > 21 * DAY) F.push({ tone: 'amber', kind: 'quiet', text: 'No rounds in ' + Math.floor((now - last.t) / (7 * DAY)) + ' weeks' });
-    if (rows.length && practiceOn && (!tests.length || now - tests[0].t > 35 * DAY)) F.push({ tone: 'amber', kind: 'test', text: tests.length ? 'Short game test due' : 'No short game test yet' });
-    var fresh = { rounds: 0, tests: 0, practice: 0 };
-    ['rounds', 'tests', 'practice'].forEach(function (k) { (A[k] || []).forEach(function (x) { if (itemT(x) > (seenAt || 0)) fresh[k]++; }); });
-    var nb = [fresh.rounds ? plural(fresh.rounds, 'round') : '', fresh.tests ? plural(fresh.tests, 'test') : '', fresh.practice ? plural(fresh.practice, 'practice log') : ''].filter(Boolean).join(', ');
-    if (nb && seenAt) F.push({ tone: 'blue', kind: 'new', text: 'New: ' + nb });
+    if (trend.dir === 'worse' && trend.diff >= 1.5) F.push({ tone: 'red', kind: 'score', text: 'Score ↑ ' + trend.diff.toFixed(1) + ' vs the 5 rounds before', to: 'rounds' });
+    if (!rows.length) F.push({ tone: 'amber', kind: 'none', text: (A.rounds || []).length ? 'No finished rounds yet' : 'No rounds shared yet', to: 'rounds' });
+    else if (now - last.t > 21 * DAY) F.push({ tone: 'amber', kind: 'quiet', text: 'No rounds in ' + Math.floor((now - last.t) / (7 * DAY)) + ' weeks', to: 'round/' + last.id });
+    if (rows.length && practiceOn && (!tests.length || now - tests[0].t > 35 * DAY)) F.push({ tone: 'amber', kind: 'test', text: tests.length ? 'Short game test due' : 'No short game test yet', to: tests.length ? 'test/' + tests[0].id : 'tests' });
+    // lesson homework (as on the app's athlete card): a lesson in the last 2 weeks (4 for a big change) that still has days left
+    var les = X.MG.validPractice(A.practice || []).filter(function (e) { return e.kind === 'lesson'; }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); })[0];
+    if (les && practiceOn) { var left = (les.change === 'big' ? 28 : 14) - Math.floor((now - Date.parse(les.date)) / DAY);
+      if (left > 0) F.push({ tone: 'amber', kind: 'lesson', text: 'Lesson homework: ' + (left >= 7 ? Math.round(left / 7) + ' wk' + (Math.round(left / 7) === 1 ? '' : 's') : left + ' day' + (left === 1 ? '' : 's')) + ' left', to: 'practice/' + les.id }); }
+    var seen = seenOf({ seen: seenIn && seenIn.ids ? seenIn : null, seenAt: typeof seenIn === 'number' ? seenIn : 0 }), fresh = freshOf(A, seen), parts = [];
+    var KIND = [['rounds', 'round', 'round'], ['tests', 'test', 'test'], ['practice', 'practice log', 'practice']];
+    KIND.forEach(function (k) { var L2 = fresh[k[0]]; if (!L2.length) return; parts.push({ kind: k[0], n: L2.length, text: plural(L2.length, k[1]), to: L2.length === 1 ? k[2] + '/' + L2[0].id : (k[0] === 'rounds' ? 'rounds' : k[0] === 'tests' ? 'tests' : 'practice') + '?new=1' }); });
+    if (parts.length && (seen.base || seen.ids && Object.keys(seen.ids).length)) F.push({ tone: 'blue', kind: 'new', text: 'New: ' + parts.map(function (p) { return p.text; }).join(', '), parts: parts, to: parts[0].to });
     var order = { red: 0, amber: 1, blue: 2 }; F.sort(function (a, b) { return order[a.tone] - order[b.tone]; });
     return F;
   }
@@ -114,11 +123,14 @@
   function summary(A, L, o) {
     o = o || {}; var now = o.now == null ? Date.now() : +o.now, period = o.period || '3m', X = lib(L);
     var P = prepare(A, L), sh = shapeFor(A, L, period, now), trend = trendOf(P), tests = testsOf(A, L, P);
-    var flags = flagsOf(A, L, P, trend, tests, now, o.seenAt), last = P.rows[0] || null;
-    var lastAct = 0; ['rounds', 'tests', 'practice'].forEach(function (k) { (A[k] || []).forEach(function (x) { lastAct = Math.max(lastAct, itemT(x)); }); });
+    var flags = flagsOf(A, L, P, trend, tests, now, o.seen || o.seenAt), last = P.rows[0] || null;
+    var lastAct = 0, latest = null; ['rounds', 'tests', 'practice'].forEach(function (k) { (A[k] || []).forEach(function (x) { var t = itemT(x); if (k === 'tests' && !x.done) return; lastAct = Math.max(lastAct, t); if (!latest || t > latest.t) latest = { kind: k, id: x.id, t: t, item: x }; }); });
+    if (latest) { var it = latest.item; delete latest.item;
+      if (latest.kind === 'rounds') { var rr = P.rows.filter(function (q) { return q.id === latest.id; })[0]; latest.row = rr ? { strokes: rr.strokes, toPar: rr.toPar, full: rr.full, holes: rr.holes, sg: rr.sg18 } : null; }
+      else if (latest.kind === 'practice') { var pe = X.MG.validPractice([it])[0]; latest.min = pe ? pe.min : 0; latest.focus = pe ? pe.focus || pe.spoke : ''; } }
     var reds = flags.filter(function (f) { return f.tone === 'red'; }).length, ambers = flags.filter(function (f) { return f.tone === 'amber'; }).length;
     return { uid: A.uid, name: A.name, bl: P.bl, blName: X.SG.baseline(P.bl).name, joined: A.member && A.member.at || 0, stamp: A.stamp,
-      n: P.rows.length, last: last, lastAct: lastAct, sg: sh.rounds ? sh.tiles.sg : null, periodRounds: sh.rounds, score: sh.tiles.score,
+      n: P.rows.length, last: last, lastAct: lastAct, latest: latest, sg: sh.rounds ? sh.tiles.sg : null, periodRounds: sh.rounds, score: sh.tiles.score,
       trend: trend, flags: flags, attention: reds * 10 + ambers * 3, reds: reds, ambers: ambers, mode: A.profile && A.profile.mode || 'full' };
   }
 
@@ -148,6 +160,29 @@
       tests: tests, prac: prac, vs: vs, series: series, scoreAvg: roll(function (q) { return q.strokes; }, 5), sgAvg: roll(function (q) { return q.sg18; }, 5), radar: sh };
   }
 
-  var API = { CATS: CATS, TEST_CATS: TEST_CATS, PERIODS: PERIODS, summary: summary, detail: detail, prepare: prepare, benchOf: benchOf, fmtSG: fmtSG, itemT: itemT };
+
+  // ---- one skill (Driving, Approach, Wedges, Chipping, Bunker, Putting): every round's number, the worst shots, practice minutes, the test ----
+  var TEST_OF = { chip: 'chipping', bunker: 'bunker', putt: 'putting', wedges: 'wedge' };
+  function dtxt(lie, d) { return lie === 'holed' ? 'holed' : (lie === 'green' ? Math.round(d) + ' ft' : Math.round(d) + ' yd'); }
+  var LIE = { tee: 'tee', fairway: 'fairway', rough: 'rough', deep: 'deep rough', bunker: 'bunker', green: 'green', hazard: 'hazard', trees: 'trees', ob: 'OB', holed: 'hole', recovery: 'trees', sand: 'bunker' };
+  function shotText(s) { return (LIE[s.start.lie] || s.start.lie) + ' ' + dtxt(s.start.lie, s.start.dist) + ' → ' + (s.end.lie === 'holed' ? 'holed' : (LIE[s.end.lie] || s.end.lie) + ' ' + dtxt(s.end.lie, s.end.dist)); }
+  function skillDetail(A, L, catKey, o) {
+    o = o || {}; var now = o.now == null ? Date.now() : +o.now, X = lib(L), P = prepare(A, L), C = CATS.filter(function (c) { return c.k === catKey; })[0]; if (!C) return null;
+    var rows = P.rows.map(function (r) { var c = r.cats[C.k]; return { id: r.id, date: r.date, t: r.t, course: r.course, holes: r.holes, n: c.n, sg: c.n ? c.sg : null, sg18: c.n ? c.sg * 18 / r.holes : null, round: r.round }; });
+    var have = rows.filter(function (r) { return r.sg18 != null; }), last5 = have.slice(0, 5).map(function (r) { return r.sg18; }), before = have.slice(5, 25).map(function (r) { return r.sg18; });
+    var avg5 = mean(last5), usual = before.length >= 4 ? mean(before) : null;
+    var shots = [], Q = rows.slice(0, 20);
+    Q.forEach(function (r) { var S = X.SG.summarize(r.round, P.bl);
+      S.holes.forEach(function (h, hi) { if (!h.done) return; h.shots.forEach(function (s) { if (s.layup) return;
+        for (var i = 0; i < X.MG.SPOKES.length; i++) if (X.MG.SPOKES[i].test(s)) { if (C.spokes.indexOf(X.MG.SPOKES[i].k) >= 0) shots.push({ rid: r.id, t: r.t, course: r.course, hole: hi + 1, n: s.n, sg: s.sg, text: shotText(s), club: s.club || '', pen: s.pen !== 'none' }); break; } }); }); });
+    var worst = shots.slice().sort(function (a, b) { return a.sg - b.sg; }).slice(0, 12), best = shots.slice().sort(function (a, b) { return b.sg - a.sg; }).slice(0, 5);
+    var logs = X.MG.validPractice(A.practice || []).filter(function (e) { return C.spokes.indexOf(e.spoke) >= 0; }).sort(function (a, b) { return Date.parse(b.date) - Date.parse(a.date); });
+    var m30 = 0, m90 = 0; logs.forEach(function (e) { var d = now - Date.parse(e.date); if (d <= 30 * DAY) m30 += e.min; if (d <= 90 * DAY) m90 += e.min; });
+    var tcat = TEST_OF[C.k] || null, tests = tcat ? testsOf(A, L, P).map(function (t) { return { id: t.id, date: t.date, t: t.t, sg: t.cats[tcat] }; }) : [];
+    var asc = rows.slice().reverse().map(function (r) { return { t: r.t, id: r.id, course: r.course, v: r.sg18 }; });
+    return { cat: C, rows: rows, series: asc, avg5: avg5, usual: usual, delta: avg5 != null && usual != null ? avg5 - usual : null, shots: shots.length, worst: worst, best: best, logs: logs, m30: m30, m90: m90, tests: tests, testCat: tcat };
+  }
+
+  var API = { skillDetail: skillDetail, testsOf: testsOf, freshOf: freshOf, seenOf: seenOf, shotText: shotText, dtxt: dtxt, tOf: tOf, CATS: CATS, TEST_CATS: TEST_CATS, PERIODS: PERIODS, summary: summary, detail: detail, prepare: prepare, benchOf: benchOf, fmtSG: fmtSG, itemT: itemT };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.COACHCALC = API;
 })(typeof self !== 'undefined' ? self : this);

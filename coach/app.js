@@ -6,17 +6,24 @@
   var CFG = window.COACH_CONFIG || {}, API = COACHAPI.create({ cfg: CFG }), CALC = COACHCALC, CH = COACHCHARTS, E = CH.esc;
   var LIBS = { SG: window.SG, MYGAME: window.MYGAME, TRENDS: window.TRENDS, SGTEST: window.SGTEST };
   var $app = document.getElementById('app'), $nav = document.getElementById('topnav');
-  var LS = { period: 'strokewise.coach.period', sort: 'strokewise.coach.sort', seen: 'strokewise.coach.seen.v1' };
-  var ST = { team: null, athletes: {}, loaded: false, busy: false, err: '', last: 0, period: lsGet(LS.period) || '3m', sort: lsGet(LS.sort) || 'attention', q: '', login: { msg: '', err: '', busy: false, reset: false, email: '' }, sums: {}, showAll: false };
+  var LS = { period: 'strokewise.coach.period', sort: 'strokewise.coach.sort', seen: 'strokewise.coach.seen.v1', seen2: 'strokewise.coach.seen.v2' };
+  var ST = { team: null, athletes: {}, loaded: false, busy: false, err: '', last: 0, period: lsGet(LS.period) || '3m', sort: lsGet(LS.sort) || 'latest', q: '', login: { msg: '', err: '', busy: false, reset: false, email: '' }, sums: {}, showAll: false, bl: {} };
   if (!CALC.PERIODS.some(function (p) { return p.id === ST.period; })) ST.period = '3m';
+  var CUR = '';
   var DAY = 864e5, MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  function seenMap() { try { return JSON.parse(lsGet(LS.seen) || '{}') || {}; } catch (e) { return {}; } }
+  // What is "New": an item that arrived after the coach first saw the athlete and has not been opened yet. { <coach uid>: { <athlete uid>: { base: time, ids: { <item id>: 1 } } } }
+  function seenMap() { try { return JSON.parse(lsGet(LS.seen2) || '{}') || {}; } catch (e) { return {}; } }
   function seenKey() { var s = API.session(); return s ? s.uid : ''; }
-  function seenOf(uid) { var m = seenMap()[seenKey()] || {}; return m[uid] || 0; }
-  function markSeen(uid) { var m = seenMap(), k = seenKey(); m[k] = m[k] || {}; m[k][uid] = Date.now(); lsSet(LS.seen, JSON.stringify(m)); delete ST.sums[uid + '|' + ST.period]; }
+  function seenSave(m) { lsSet(LS.seen2, JSON.stringify(m)); }
+  function seenFor(uid) { var m = seenMap(), e = (m[seenKey()] || {})[uid]; if (e) return e;
+    try { var old = JSON.parse(lsGet(LS.seen) || '{}') || {}, t = (old[seenKey()] || {})[uid]; if (t) return { base: t, ids: {} }; } catch (e2) {} return { base: 0, ids: {} }; }
+  function seenPut(uid, f) { var m = seenMap(), k = seenKey(); m[k] = m[k] || {}; var e = m[k][uid] || seenFor(uid); f(e); e.ids = e.ids || {}; m[k][uid] = e; seenSave(m); ST.sums = {}; }
+  function markItem(uid, id) { if (!id) return; var e = seenFor(uid); if (e.ids && e.ids[id]) return; seenPut(uid, function (x) { x.ids = x.ids || {}; x.ids[id] = 1; }); }
+  function isNewItem(uid, kind, id) { var sn = seenFor(uid), it = (ST.athletes[uid][kind] || []).filter(function (x) { return x.id === id; })[0]; return !!(it && sn.base && CALC.itemT(it) > sn.base && !(sn.ids || {})[id]); }
+  function markAll(uid) { seenPut(uid, function (x) { x.base = Date.now(); x.ids = {}; }); }
 
   // ---------- helpers ----------
   function fd(t, withYear) { if (!t) return '–'; var d = new Date(t); return MON[d.getMonth()] + ' ' + d.getDate() + (withYear || d.getFullYear() !== new Date().getFullYear() ? ', ' + d.getFullYear() : ''); }
@@ -28,8 +35,19 @@
     var a = tr.dir === 'better' ? '↓' : tr.dir === 'worse' ? '↑' : '→';
     return '<span title="Average of the last 5 rounds (' + tr.a5.toFixed(1) + ') vs the 5 before (' + tr.p5.toFixed(1) + ')"><span class="arrow ' + tr.dir + '">' + a + '</span> <span class="sgv ' + (tr.dir === 'flat' ? '' : tr.dir === 'better' ? 'pos' : 'neg') + '">' + tr.diff.toFixed(1) + '</span></span>';
   }
-  function pillsHTML(flags, max) { if (!flags.length) return '<span class="pill ok">On track</span>'; var out = flags.slice(0, max || 3).map(function (f) { return '<span class="pill ' + f.tone + '">' + E(f.text) + '</span>'; });
-    if (flags.length > (max || 3)) out.push('<span class="pill">+' + (flags.length - (max || 3)) + '</span>'); return out.join(''); }
+  function H(uid, rest) { return '#/a/' + encodeURIComponent(uid) + (rest ? '/' + rest : ''); }
+  function hm(min) { min = Math.round(min || 0); var h = Math.floor(min / 60), m = min % 60; return h ? h + 'h' + (m ? ' ' + m + 'm' : '') : m + 'm'; }
+  // one tag: red / amber / blue / green. Every tag is a link to the thing it is about. A "New" tag links each part (1 test, 2 practice logs) on its own.
+  function tagHTML(f, uid) {
+    if (f.parts) return '<span class="tagp blue">New: ' + f.parts.map(function (p) { return '<a href="' + H(uid, p.to) + '">' + E(p.text) + '</a>'; }).join(', ') + '</span>';
+    return '<a class="tagp ' + f.tone + '" href="' + H(uid, f.to || '') + '">' + E(f.text) + '</a>'; }
+  function tagsHTML(s, max) { var F = s.flags.slice().sort(function (a, b) { return (b.kind === 'new') - (a.kind === 'new'); }); if (!F.length) return '<a class="tagp green" href="' + H(s.uid) + '">Holding steady</a>';
+    var out = F.slice(0, max || 3).map(function (f) { return tagHTML(f, s.uid); }); if (F.length > (max || 3)) out.push('<a class="tagp more" href="' + H(s.uid) + '">+' + (F.length - (max || 3)) + ' more</a>'); return out.join(''); }
+  function flagsHTML(flags, uid) {
+    return '<div class="flags">' + flags.map(function (f) { var ic = '<i>' + (f.tone === 'red' ? '!' : f.tone === 'amber' ? '•' : '+') + '</i>';
+      if (f.parts) return '<div class="flagrow ' + f.tone + '">' + ic + 'New: ' + f.parts.map(function (p) { return '<a href="' + H(uid, p.to) + '">' + E(p.text) + '</a>'; }).join(', ') + '<span class="sp"></span><button class="linkbtn" data-act="markall" data-uid="' + E(uid) + '">Mark all as seen</button></div>';
+      return '<a class="flagrow ' + f.tone + '" href="' + H(uid, f.to || '') + '">' + ic + E(f.text) + '<span class="go">View ›</span></a>'; }).join('') + '</div>'; }
+  function avColor(name) { var hs = 0, id = String(name).toLowerCase(); for (var q = 0; q < id.length; q++) hs = (hs * 7 + id.charCodeAt(q)) % 6007; return ['#7a5ab0', '#3f7fbf', '#d39b2a', '#3f9a63', '#b0505a', '#2f8f8f', '#c0662b'][hs % 7]; }
   function periodName(id) { return CALC.PERIODS.filter(function (p) { return p.id === id; })[0].name; }
   function authMsg(e) { var m = String(e && (e.message || e.code) || '');
     return /INVALID_LOGIN|INVALID_PASSWORD|EMAIL_NOT_FOUND|INVALID_CREDENTIAL/.test(m) ? 'Email or password doesn’t match.' : /INVALID_EMAIL|MISSING_EMAIL/.test(m) ? 'That email doesn’t look right.' : /MISSING_PASSWORD/.test(m) ? 'Type your password.' :
@@ -57,13 +75,13 @@
     if (ST.busy || !ST.team) return Promise.resolve(); ST.busy = true; if (!quiet) route();
     return API.pull(ST.team.team, ST.athletes).then(function (P) {
       ST.busy = false; ST.err = ''; ST.last = Date.now(); ST.athletes = P.athletes; ST.loaded = true; ST.sums = {};
-      var m = seenMap(), k = seenKey(); m[k] = m[k] || {}; Object.keys(P.athletes).forEach(function (u) { if (!m[k][u]) m[k][u] = Date.now(); }); lsSet(LS.seen, JSON.stringify(m)); // "New" counts from the first look
+      var m = seenMap(), k = seenKey(); m[k] = m[k] || {}; Object.keys(P.athletes).forEach(function (u) { if (!m[k][u]) { var o = seenFor(u); m[k][u] = o.base ? o : { base: Date.now(), ids: {} }; } }); seenSave(m); // "New" counts from the first look
       idbSet(cacheKey(), { team: ST.team.team, athletes: ST.athletes, at: ST.last }); route();
     }, function (e) { ST.busy = false; if (e.code === 'signedout' || e.code === 'denied') { signedOut('Please sign in again.'); return; } ST.err = e.code === 'offline' ? 'No signal. Showing what was here last time.' : authMsg(e); ST.loaded = true; route(); });
   }
   function sums() { // one summary per athlete for the chosen time frame
     return Object.keys(ST.athletes).map(function (u) { var key = u + '|' + ST.period, A = ST.athletes[u];
-      if (!ST.sums[key]) { try { ST.sums[key] = CALC.summary(A, LIBS, { period: ST.period, seenAt: seenOf(u) }); } catch (e) { if (window.console) console.error(e); ST.sums[key] = { uid: u, name: A.name, bl: 'pga', blName: '', n: 0, last: null, flags: [], attention: 0, reds: 0, ambers: 0, trend: { dir: null }, sg: null, periodRounds: 0, lastAct: 0, joined: 0 }; } }
+      if (!ST.sums[key]) { try { ST.sums[key] = CALC.summary(A, LIBS, { period: ST.period, seen: seenFor(u) }); } catch (e) { if (window.console) console.error(e); ST.sums[key] = { uid: u, name: A.name, bl: 'pga', blName: '', n: 0, last: null, flags: [], attention: 0, reds: 0, ambers: 0, trend: { dir: null }, sg: null, periodRounds: 0, lastAct: 0, joined: 0 }; } }
       return ST.sums[key]; });
   }
   function needs(s) { return s.reds > 0 || s.flags.some(function (f) { return f.kind === 'quiet'; }); } // red tags, or no rounds in 3+ weeks
@@ -78,8 +96,9 @@
     if (!API.session()) { document.title = 'Coach sign in – Strokewise'; return loginView(); }
     if (!ST.loaded) { document.title = 'Coach dashboard – Strokewise'; $app.innerHTML = '<div class="wrap dash"><div class="skel" style="height:90px"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>'; return; }
     if (ST.team === false) return noTeamView();
-    var m = /^#\/a\/([^?]+)/.exec(location.hash || '');
-    if (m && ST.athletes[decodeURIComponent(m[1])]) return athleteView(decodeURIComponent(m[1]));
+    var m = /^#\/a\/([^/?]+)(?:\/([^?]*))?(?:\?(.*))?$/.exec(location.hash || '');
+    if (m && ST.athletes[decodeURIComponent(m[1])]) { var uid = decodeURIComponent(m[1]), parts = (m[2] || '').split('/').filter(Boolean);
+      if (!parts.length || parts[0] === 'overview') return athleteView(uid); return athletePage(uid, parts, m[3] || ''); }
     document.title = (ST.team ? ST.team.name + ' – ' : '') + 'Coach dashboard – Strokewise';
     return listView();
   }
@@ -107,42 +126,45 @@
 
   function sorted(S) {
     var q = ST.q.trim().toLowerCase(), L = S.filter(function (s) { return !q || s.name.toLowerCase().indexOf(q) >= 0; }), by = {
+      latest: function (a, b) { return b.lastAct - a.lastAct || a.name.localeCompare(b.name); },
       attention: function (a, b) { return b.attention - a.attention || a.name.localeCompare(b.name); },
       name: function (a, b) { return a.name.localeCompare(b.name); },
       last: function (a, b) { return (b.last ? b.last.t : 0) - (a.last ? a.last.t : 0) || a.name.localeCompare(b.name); },
       sg: function (a, b) { return (b.sg == null ? -99 : b.sg) - (a.sg == null ? -99 : a.sg) || a.name.localeCompare(b.name); },
       rounds: function (a, b) { return b.n - a.n || a.name.localeCompare(b.name); } };
-    return L.sort(by[ST.sort] || by.attention);
+    return L.sort(by[ST.sort] || by.latest);
   }
-  function rowHTML(s) {
-    var l = s.last, nm = '<a class="nm" href="#/a/' + encodeURIComponent(s.uid) + '">' + E(s.name) + '</a><span class="chip" title="Benchmark">' + E(s.blName) + '</span>';
-    return '<div class="tr" data-act="open" data-uid="' + E(s.uid) + '">' +
-      '<div class="c name"><div>' + nm + '</div></div>' +
-      '<div class="c last"><span class="lab-m">Last round</span>' + (l ? fd(l.t) + ' <span class="mut">· ' + E(l.course) + '</span>' : '<span class="muted">No rounds yet</span>') + '</div>' +
-      '<div class="c r score"><span class="lab-m">Score</span>' + (l ? '<b>' + l.strokes + '</b> <span class="mut">' + (l.full ? par(l.toPar) : l.holes + ' holes') + '</span>' : '<span class="muted">–</span>') + '</div>' +
-      '<div class="c r rounds"><span class="lab-m">Rounds</span>' + s.n + '</div>' +
-      '<div class="c r sg"><span class="lab-m">SG / round</span>' + sgHTML(s.sg) + '</div>' +
-      '<div class="c r trend"><span class="lab-m">Score trend</span>' + arrowHTML(s.trend) + '</div>' +
-      '<div class="c flags"><div class="pills">' + pillsHTML(s.flags, 3) + '</div></div></div>';
+  function whenTxt(s) {
+    var l = s.latest; if (!l) return s.joined ? 'Joined ' + ago(s.joined) : 'No activity yet';
+    if (l.kind === 'rounds') { var r = l.row; return 'Round · ' + ago(l.t) + (r ? ', ' + r.strokes + (r.full ? ' (' + par(r.toPar) + ')' : ' · ' + r.holes + ' holes') + (r.sg != null ? ' · SG ' + CALC.fmtSG(r.sg) : '') : ''); }
+    if (l.kind === 'tests') return 'Short game test · ' + ago(l.t);
+    return 'Practice · ' + ago(l.t) + (l.min ? ', ' + l.min + ' min' + (l.focus ? ' ' + String(l.focus).toLowerCase() : '') : '');
+  }
+  function whenLink(s) { var l = s.latest; if (!l) return H(s.uid); return H(s.uid, (l.kind === 'rounds' ? 'round/' : l.kind === 'tests' ? 'test/' : 'practice/') + encodeURIComponent(l.id)); }
+  function cardHTML(s) {
+    var tr = s.trend, a5 = tr && tr.a5, ar = !tr || !tr.dir ? '' : '<small class="' + (tr.dir === 'better' ? 'cmup' : tr.dir === 'worse' ? 'cmdn' : 'cmflat') + '">' + (tr.dir === 'better' ? '↓' : tr.dir === 'worse' ? '↑' : '→') + ' ' + tr.diff.toFixed(1) + '</small>';
+    var hot = needs(s), u = encodeURIComponent(s.uid);
+    return '<article class="acard' + (hot ? ' hot' : '') + '" data-act="open" data-uid="' + E(s.uid) + '">' +
+      '<a class="av" href="#/a/' + u + '" style="background:' + avColor(s.name) + '" aria-hidden="true" tabindex="-1">' + E(String(s.name).charAt(0).toUpperCase()) + '</a>' +
+      '<div class="amain"><div class="aname"><a class="nm" href="#/a/' + u + '">' + E(s.name) + '</a>' + (hot ? '<span class="bang" title="Needs attention" aria-label="Needs attention">!</span>' : '') + '</div>' +
+      '<a class="awhen" href="' + whenLink(s) + '">' + E(whenTxt(s)) + '</a></div>' +
+      '<div class="ascore" title="Average score of the last 5 full rounds, arrow against the 5 before">' + (a5 != null ? '<b>' + a5.toFixed(1) + '</b>' + ar : '<b>–</b>') + '<em>AVG (5)</em></div>' +
+      '<div class="atags">' + tagsHTML(s, 3) + '</div></article>';
   }
   function listView() {
-    var T = ST.team, S = sums(), rows = sorted(S), n = S.length, hot = S.filter(needs).length, rd = S.reduce(function (t, s) { return t + s.periodRounds; }, 0), act = S.filter(function (s) { return Date.now() - s.lastAct < 7 * DAY && s.lastAct; }).length;
+    var T = ST.team, S = sums(), rows = sorted(S), n = S.length, hot = S.filter(needs).length, rd = S.reduce(function (t, s) { return t + s.periodRounds; }, 0);
     var h = '<div class="wrap dash"><div class="head"><div class="t"><span class="eyebrow">Coach dashboard</span><h1>' + E(T.name || 'My team') + '</h1><div class="sub">' + (T.coachName ? 'Coach ' + E(T.coachName) + ' · ' : '') + n + ' athlete' + (n === 1 ? '' : 's') + ' · <span id="upd">' + (ST.busy ? 'Updating…' : ST.err ? E(ST.err) : ST.last ? 'Updated ' + ago(ST.last) : '') + '</span></div></div>' +
-      '<div class="codecard"><div><div class="lab">Team code</div><div class="code">' + E(T.code || '–') + '</div></div><div class="btns"><button class="btn sec sm" data-act="copycode">Copy invite</button></div></div></div>';
+      '<div class="codecard"><div><div class="lab">Team code</div><div class="code">' + E(T.code || '–') + '</div></div><div class="btns"><button class="btn sec sm" data-act="copycode">Invite</button></div></div></div>';
     if (!n) {
-      h += '<div class="card empty"><h2>No athletes yet</h2><p class="muted">Athletes appear here after their first sync.</p><ol class="flow"><li><b>Send</b> athletes your invite: <b>' + E(T.code) + '</b></li><li><b>They join</b> in the app: Settings, then Connect to a coach.</li><li><b>Rounds arrive</b> on their own.</li></ol><p><button class="btn pri" data-act="copycode">Copy invite</button> <button class="btn sec" data-act="refresh">Refresh</button></p></div>';
+      h += '<div class="card empty"><h2>No athletes yet</h2><p class="muted">Athletes appear here after their first sync.</p><ol class="flow"><li><b>Send</b> athletes your invite: <b>' + E(T.code) + '</b></li><li><b>They join</b> in the app: Settings, then Connect to a coach.</li><li><b>Rounds arrive</b> on their own.</li></ol><p><button class="btn pri" data-act="copycode">Invite</button> <button class="btn sec" data-act="refresh">Refresh</button></p></div>';
     } else {
-      h += '<div class="tiles"><div class="tile"><div class="k">Athletes</div><div class="v">' + n + '</div><div class="n">on ' + E(T.name || 'your team') + '</div></div>' +
-        '<div class="tile' + (hot ? ' hot' : '') + '"><div class="k">Need attention</div><div class="v">' + hot + '</div><div class="n">' + (hot ? 'see the red and amber tags' : 'everyone is on track') + '</div></div>' +
-        '<div class="tile"><div class="k">Rounds</div><div class="v">' + rd + '</div><div class="n">' + periodName(ST.period).toLowerCase() + '</div></div>' +
-        '<div class="tile"><div class="k">Active this week</div><div class="v">' + act + '</div><div class="n">shared rounds, tests or practice</div></div></div>';
       h += '<div class="bar"><div class="seg" role="group" aria-label="Time frame">' + CALC.PERIODS.map(function (p) { return '<button data-act="period" data-v="' + p.id + '" class="' + (p.id === ST.period ? 'on' : '') + '" aria-pressed="' + (p.id === ST.period) + '">' + p.name + '</button>'; }).join('') + '</div>' +
         '<input type="search" id="q" placeholder="Search athletes" aria-label="Search athletes" value="' + E(ST.q) + '">' +
-        '<select id="sort" aria-label="Sort">' + [['attention', 'Needs attention first'], ['name', 'Name'], ['last', 'Last round'], ['sg', 'SG per round'], ['rounds', 'Most rounds']].map(function (o) { return '<option value="' + o[0] + '"' + (ST.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
-        '<span class="grow"></span><button class="btn sec sm" data-act="csv">Download CSV</button><button class="btn sec sm" data-act="refresh"' + (ST.busy ? ' disabled' : '') + '>Refresh</button></div>';
-      h += '<div class="tbl" id="tbl"><div class="tr th"><div>Athlete</div><div>Last round</div><div class="r">Score</div><div class="r">Rounds</div><div class="r">SG / round</div><div class="r">Score trend</div><div>Attention</div></div>' +
-        (rows.length ? rows.map(rowHTML).join('') : '<div class="tr"><div class="muted">No athlete matches “' + E(ST.q) + '”.</div></div>') + '</div>' +
-        '<p class="note">SG / round = strokes gained per 18 holes in the chosen time frame, against each athlete’s own benchmark (shown beside the name). Score trend = average of the last 5 full rounds vs the 5 before: <span class="arrow better">↓</span> green is lower (better), <span class="arrow worse">↑</span> red is higher (worse).</p>';
+        '<select id="sort" aria-label="Sort">' + [['latest', 'Latest activity'], ['attention', 'Needs attention first'], ['name', 'Name'], ['last', 'Last round'], ['sg', 'SG per round'], ['rounds', 'Most rounds']].map(function (o) { return '<option value="' + o[0] + '"' + (ST.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+        '<span class="grow"></span><button class="btn sec sm" data-act="csv">CSV</button><button class="btn sec sm" data-act="refresh"' + (ST.busy ? ' disabled' : '') + '>Refresh</button></div>';
+      h += '<div class="sechead"><h2>Latest activity</h2><span class="muted" id="cnt">' + (hot ? hot + ' need attention · ' : '') + rd + ' round' + (rd === 1 ? '' : 's') + ', ' + periodName(ST.period).toLowerCase() + '</span></div>' +
+        '<div class="cards" id="cards">' + (rows.length ? rows.map(cardHTML).join('') : '<div class="card empty"><p class="muted">No athlete matches “' + E(ST.q) + '”.</p></div>') + '</div>' +
+        '<p class="note">AVG (5) is the average score of the last 5 full rounds. The arrow is against the 5 before: <span class="arrow better">↓</span> green is lower (better), <span class="arrow worse">↑</span> red is higher (worse). Click a tag to open what it is about. SG per round is against each athlete’s own benchmark.</p>';
     }
     $app.innerHTML = h + '</div>' + footer();
   }
@@ -154,13 +176,13 @@
       var w = c.value == null ? 0 : Math.min(50, Math.abs(c.value) / max * 50), side = c.value != null && c.value < 0 ? 'right:50%;width:' + w + '%' : 'left:50%;width:' + w + '%';
       var bar = c.value == null ? '' : '<u class="' + (c.solid ? (c.value < 0 ? 'n' : 'p') : 'l') + '" style="' + side + '"></u>';
       var dl = c.delta == null ? '' : '<small class="' + (c.delta >= 0.25 ? 'pos' : c.delta <= -0.25 ? 'neg' : 'muted') + '">' + CALC.fmtSG(c.delta) + ' vs usual</small>';
-      return '<div class="catrow"><div class="nm"><b>' + c.name + '</b><span>' + c.sub + '</span></div><div class="track" role="img" aria-label="' + c.name + ' ' + (c.value == null ? 'no shots' : CALC.fmtSG(c.value) + ' strokes per round') + '">' + bar + '</div>' +
-        '<div class="val">' + (c.value == null ? '<span class="muted">no shots</span>' : sgHTML(c.value) + (c.solid ? '' : '<small class="muted">few shots</small>') + dl) + '</div></div>'; }).join('');
+      return '<a class="catrow" href="' + H(CUR, 'skill/' + c.k) + '"><div class="nm"><b>' + c.name + '</b><span>' + c.sub + '</span></div><div class="track" role="img" aria-label="' + c.name + ' ' + (c.value == null ? 'no shots' : CALC.fmtSG(c.value) + ' strokes per round') + '">' + bar + '</div>' +
+        '<div class="val">' + (c.value == null ? '<span class="muted">no shots</span>' : sgHTML(c.value) + (c.solid ? '' : '<small class="muted">few shots</small>') + dl) + '</div></a>'; }).join('');
     return rows + '<div class="axis"><span>−' + max + '</span><span>benchmark</span><span>+' + max + '</span></div>';
   }
   function practiceHTML(D, A) {
     if (A.profile && A.profile.mode === 'stats') return '<p class="muted">This athlete turned practice logging off.</p>';
-    if (!D.prac) return '<p class="muted">No practice logged in this time frame.</p>';
+    if (!D.prac) return '<p class="muted">No practice logged in this time frame.</p><p class="note"><a href="' + H(CUR, 'practice') + '">Practice log ›</a></p>';
     var P = D.prac, h = '';
     if (!D.vs) return '<p class="headline">' + P.hm + ' in ' + P.sessions + ' session' + (P.sessions === 1 ? '' : 's') + '</p><p class="muted">No strokes lost to the benchmark in this time frame, so there is nothing to compare.</p>';
     var g = D.vs.gap;
@@ -168,25 +190,25 @@
     h += '<p class="sub">' + P.hm + ' in ' + P.sessions + ' session' + (P.sessions === 1 ? '' : 's') + (P.lessons ? ' · ' + P.lessons + ' lesson' + (P.lessons === 1 ? '' : 's') + ' logged' : '') + '.</p>';
     h += D.vs.rows.map(function (r) { var l = Math.round(r.lostShare * 100), t = Math.round(r.timeShare * 100);
       return '<div class="pvrow' + (g && g.k === r.k ? ' gap' : '') + '"><span>' + r.name + '</span><div class="pvbars"><div class="pvb l"><u style="width:' + l + '%"></u></div><div class="pvb t"><u style="width:' + t + '%"></u></div></div><em><b class="lo">' + l + '%</b> · <b class="ti">' + t + '%</b></em></div>'; }).join('');
-    return h + '<div class="radarwrap"><div class="legend"><span><i style="background:#e2705c"></i>Share of strokes lost</span><span><i style="background:#2f6fc9"></i>Share of practice time</span></div></div>';
+    return h + '<div class="radarwrap"><div class="legend"><span><i style="background:#e2705c"></i>Share of strokes lost</span><span><i style="background:#2f6fc9"></i>Share of practice time</span></div></div><p class="note"><a href="' + H(CUR, 'practice') + '">Practice log ›</a> · <a href="' + H(CUR, 'plan') + '">Practice plan ›</a></p>';
   }
   function testsHTML(D, A) {
     if (!D.tests.length) return '<p class="muted">No short game test finished yet.</p>';
     var T = D.tests.slice(0, 6), cols = CALC.TEST_CATS;
     var h = '<div class="scroll"><table class="rt tests"><thead><tr><th>Date</th>' + cols.map(function (c) { return '<th>' + c.name + '</th>'; }).join('') + '</tr></thead><tbody>';
     T.forEach(function (t, i) { var prev = D.tests[i + 1];
-      h += '<tr><td>' + fd(t.t, true) + '</td>' + cols.map(function (c) { var v = t.cats[c.k], p = prev && prev.cats[c.k], dv = v != null && p != null ? v - p : null;
+      var u = H(CUR, 'test/' + encodeURIComponent(t.id)); h += '<tr class="clk" data-href="' + u + '"><td><a href="' + u + '">' + fd(t.t, true) + '</a>' + (isNewItem(CUR, 'tests', t.id) ? '<span class="tag new">New</span>' : '') + '</td>' + cols.map(function (c) { var v = t.cats[c.k], p = prev && prev.cats[c.k], dv = v != null && p != null ? v - p : null;
         return '<td>' + (v == null ? '<span class="muted">–</span>' : sgHTML(v, 2) + (dv != null && Math.abs(dv) >= 0.03 ? ' <small class="' + (dv > 0 ? 'pos' : 'neg') + '">' + (dv > 0 ? '▲' : '▼') + '</small>' : '')) + '</td>'; }).join('') + '</tr>'; });
-    return h + '</tbody></table></div><p class="note">Strokes gained per shot against the benchmark. The same shots every test. ▲ better and ▼ worse than the test before.</p>';
+    return h + '</tbody></table></div><p class="note">Strokes gained per shot against the benchmark. The same shots every test. ▲ better and ▼ worse than the test before. <a href="' + H(CUR, 'tests') + '">All tests ›</a></p>';
   }
   function roundsHTML(D) {
-    var all = D.allRounds, rows = ST.showAll ? all : all.slice(0, 12), C = CALC.CATS;
+    var all = D.allRounds, rows = ST.showAll ? all.slice(0, 40) : all.slice(0, 12), C = CALC.CATS;
     if (!all.length) return '<p class="muted">No finished rounds yet.</p>';
     var h = '<div class="scroll"><table class="rt"><thead><tr><th>Date</th><th class="l">Course</th><th>Score</th><th>To par</th><th>SG</th>' + C.map(function (c) { return '<th>' + c.name + '</th>'; }).join('') + '</tr></thead><tbody>';
-    rows.forEach(function (r) { h += '<tr><td>' + fd(r.t, true) + '</td><td class="l" title="' + E(r.course) + '">' + E(r.course) + (r.play === 'tournament' ? '<span class="tag">Tournament</span>' : '') + '</td><td><b>' + r.strokes + '</b>' + (r.full ? '' : ' <small class="muted">' + r.holes + ' holes</small>') + '</td><td>' + par(r.toPar) + '</td><td>' + sgHTML(r.sg) + '</td>' +
+    rows.forEach(function (r) { var u = H(CUR, 'round/' + encodeURIComponent(r.id)); h += '<tr class="clk" data-href="' + u + '"><td><a href="' + u + '">' + fd(r.t, true) + '</a></td><td class="l" title="' + E(r.course) + '">' + E(r.course) + (r.play === 'tournament' ? '<span class="tag">Tournament</span>' : '') + (isNewItem(CUR, 'rounds', r.id) ? '<span class="tag new">New</span>' : '') + '</td><td><b>' + r.strokes + '</b>' + (r.full ? '' : ' <small class="muted">' + r.holes + ' holes</small>') + '</td><td>' + par(r.toPar) + '</td><td>' + sgHTML(r.sg) + '</td>' +
       C.map(function (c) { return '<td>' + (r.cats[c.k].n ? sgHTML(r.cats[c.k].sg) : '<span class="muted">–</span>') + '</td>'; }).join('') + '</tr>'; });
     h += '</tbody></table></div>';
-    if (all.length > 12) h += '<p class="note"><button class="linkbtn" data-act="showall">' + (ST.showAll ? 'Show the latest 12' : 'Show all ' + all.length + ' rounds') + '</button></p>';
+    h += '<p class="note"><a href="' + H(CUR, 'rounds') + '">Open all ' + all.length + ' rounds ›</a>' + (all.length > 12 ? ' · <button class="linkbtn" data-act="showall">' + (ST.showAll ? 'Show the latest 12' : 'Show 12 more') + '</button>' : '') + '</p>';
     return h + '<p class="note">Strokes gained per round, by skill. The six skills add up to the round’s total.</p>';
   }
   function trendsHTML(D) {
@@ -205,16 +227,33 @@
     return '<div class="charts"><div><h3>Score</h3><p class="sub">Lower is better. Dots are rounds (18 holes), the line is the average of the last 5.</p>' + score + '</div><div><h3>Strokes gained</h3><p class="sub">Per 18 holes. Above the dashed line beats the benchmark.</p>' + sg + '</div></div>' +
       '<h3 style="margin-top:22px">By skill</h3><p class="sub">Strokes gained per 18 holes. The number is the average of the last 5 rounds with shots in that skill.</p><div class="minis">' + minis + '</div>';
   }
+  var TABS = [['overview', 'Overview', ''], ['rounds', 'Rounds', 'rounds'], ['stats', 'Stats', 'stats'], ['mygame', 'My Game', 'mygame'], ['trends', 'Trends', 'trends'], ['practice', 'Practice', 'practice'], ['tests', 'Tests', 'tests']];
+  function chrome(uid, tab, s, extra) {
+    var A = ST.athletes[uid], order = sorted(sums()).map(function (x) { return x.uid; }), i = order.indexOf(uid), prev = order[i - 1], next = order[i + 1], to = (TABS.filter(function (t) { return t[0] === tab; })[0] || [0, 0, ''])[2];
+    return '<div class="crumb"><a href="#/">‹ All athletes</a><span class="sp"></span>' +
+      (prev ? '<a href="' + H(prev, to) + '">‹ ' + E(ST.athletes[prev].name) + '</a>' : '') + (next ? '<a href="' + H(next, to) + '">' + E(ST.athletes[next].name) + ' ›</a>' : '') + '</div>' +
+      '<div class="head"><div class="t"><span class="eyebrow">Athlete</span><h1>' + E(A.name) + (needs(s) ? ' <span class="bang" title="Needs attention">!</span>' : '') + '</h1><div class="sub">Benchmark ' + E(s.blName) + ' · ' + s.n + ' round' + (s.n === 1 ? '' : 's') + ' shared' + (s.last ? ' · last round ' + fd(s.last.t, true) : '') + (s.trend.dir ? ' · ' + arrowHTML(s.trend) + ' score trend' : '') + '</div></div>' + (extra || '') + '</div>' +
+      '<nav class="atabs" aria-label="Athlete sections">' + TABS.map(function (t) { return '<a href="' + H(uid, t[2]) + '" class="' + (t[0] === tab ? 'on' : '') + '"' + (t[0] === tab ? ' aria-current="page"' : '') + '>' + t[1] + '</a>'; }).join('') + '</nav>';
+  }
+  var pages = null;
+  function athletePage(uid, parts, query) {
+    var A = ST.athletes[uid], s = sums().filter(function (x) { return x.uid === uid; })[0], R;
+    if (!pages) pages = window.COACHPAGES({ ST: ST, CALC: CALC, CH: CH, E: E, LIBS: LIBS, fd: fd, par: par, sgHTML: sgHTML, hm: hm, seenFor: seenFor, markItem: markItem, detail: function (u) { return CALC.detail(ST.athletes[u], LIBS, { period: 'all', seen: seenFor(u) }); }, trendsHTML: trendsHTML });
+    try { R = pages.render(uid, parts, query); } catch (e) { if (window.console) console.error(e); $app.innerHTML = '<div class="wrap dash"><p class="msg err">Couldn’t show this page.</p><p><a href="' + H(uid) + '">Back to ' + E(A.name) + '</a></p></div>'; return; }
+    if (!R) { location.hash = H(uid); return; }
+    var title = { rounds: 'Rounds', stats: 'Stats', mygame: 'My Game', trends: 'Trends', practice: 'Practice', tests: 'Tests', overview: 'Overview' }[R.tab] || '';
+    document.title = A.name + ' · ' + title + ' – ' + (ST.team.name || 'Coach dashboard') + ' – Strokewise';
+    var y = ST.keepY; ST.keepY = null;
+    $app.innerHTML = '<div class="wrap dash">' + chrome(uid, R.tab, s) + '<div class="apage" data-uid="' + E(uid) + '">' + R.html + '</div></div>' + pages.overlay(uid) + footer();
+    pages.after($app, uid);
+    if (y != null) window.scrollTo(0, y);
+  }
   function athleteView(uid) {
     var A = ST.athletes[uid], D, s;
-    try { D = CALC.detail(A, LIBS, { period: ST.period, seenAt: seenOf(uid) }); } catch (e) { if (window.console) console.error(e); $app.innerHTML = '<div class="wrap dash"><p class="msg err">Couldn’t read this athlete’s data.</p><p><a href="#/">Back to all athletes</a></p></div>'; return; }
-    s = D.summary; document.title = A.name + ' – ' + (ST.team.name || 'Coach dashboard') + ' – Strokewise';
-    var order = sorted(sums()).map(function (x) { return x.uid; }), i = order.indexOf(uid), prev = order[i - 1], next = order[i + 1];
-    var T = D.tiles, h = '<div class="wrap dash"><div class="crumb"><a href="#/">‹ All athletes</a><span class="sp"></span>' +
-      (prev ? '<a href="#/a/' + encodeURIComponent(prev) + '">‹ ' + E(ST.athletes[prev].name) + '</a>' : '') + (next ? '<a href="#/a/' + encodeURIComponent(next) + '">' + E(ST.athletes[next].name) + ' ›</a>' : '') + '</div>' +
-      '<div class="head"><div class="t"><span class="eyebrow">Athlete</span><h1>' + E(A.name) + '</h1><div class="sub">Benchmark ' + E(s.blName) + ' · ' + s.n + ' round' + (s.n === 1 ? '' : 's') + ' shared' + (s.last ? ' · last round ' + fd(s.last.t, true) : '') + (s.trend.dir ? ' · ' + arrowHTML(s.trend) + ' score trend' : '') + '</div></div>' +
-      '<div class="seg" role="group" aria-label="Time frame">' + CALC.PERIODS.map(function (p) { return '<button data-act="period" data-v="' + p.id + '" class="' + (p.id === ST.period ? 'on' : '') + '" aria-pressed="' + (p.id === ST.period) + '">' + p.name + '</button>'; }).join('') + '</div></div>';
-    if (s.flags.length) h += '<div class="sec"><div class="flags">' + s.flags.map(function (f) { return '<div class="flagrow ' + f.tone + '"><i>' + (f.tone === 'red' ? '!' : f.tone === 'amber' ? '•' : '+') + '</i>' + E(f.text) + '</div>'; }).join('') + '</div></div>';
+    try { D = CALC.detail(A, LIBS, { period: ST.period, seen: seenFor(uid) }); } catch (e) { if (window.console) console.error(e); $app.innerHTML = '<div class="wrap dash"><p class="msg err">Couldn’t read this athlete’s data.</p><p><a href="#/">Back to all athletes</a></p></div>'; return; }
+    CUR = uid; s = D.summary; document.title = A.name + ' – ' + (ST.team.name || 'Coach dashboard') + ' – Strokewise';
+    var T = D.tiles, h = '<div class="wrap dash">' + chrome(uid, 'overview', s, '<div class="seg" role="group" aria-label="Time frame">' + CALC.PERIODS.map(function (p) { return '<button data-act="period" data-v="' + p.id + '" class="' + (p.id === ST.period ? 'on' : '') + '" aria-pressed="' + (p.id === ST.period) + '">' + p.name + '</button>'; }).join('') + '</div>');
+    if (s.flags.length) h += '<div class="sec">' + flagsHTML(s.flags, uid) + '</div>';
     h += '<div class="tilesm"><div class="tile"><div class="k">Average score</div><div class="v">' + (T.score == null ? '–' : T.score.toFixed(1)) + '</div><div class="n">18-hole rounds</div></div>' +
       '<div class="tile"><div class="k">Strokes gained</div><div class="v">' + (D.rounds ? sgHTML(T.sg) : '–') + '</div><div class="n">per 18 holes</div></div>' +
       '<div class="tile"><div class="k">Greens in regulation</div><div class="v">' + (T.gir == null ? '–' : Math.round(T.gir) + '%') + '</div><div class="n">of holes</div></div>' +
@@ -228,7 +267,6 @@
     h += '<div class="grid2 even"><div class="card"><h3>Short game tests</h3><p class="sub">A fixed check of putting, chipping, bunker play and wedges.</p>' + testsHTML(D, A) + '</div>' +
       '<div class="card"><h3>Strokes lost vs practice time</h3><p class="sub">' + periodName(ST.period) + '. Where the strokes go next to where the time goes.</p>' + practiceHTML(D, A) + '</div></div>';
     $app.innerHTML = h + '</div>' + footer();
-    markSeen(uid);
   }
 
   // ---------- actions ----------
@@ -241,22 +279,65 @@
     var blob = new Blob([rows.map(function (r) { return r.map(q).join(','); }).join('\n')], { type: 'text/csv' }), a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'strokewise-athletes-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
+  function curUid() { var m = /^#\/a\/([^/?]+)/.exec(location.hash || ''); return m ? decodeURIComponent(m[1]) : null; }
+  function curRound() { var m = /\/round\/([^/?]+)/.exec(location.hash || ''); return m ? decodeURIComponent(m[1]) : null; }
+  function rerender() { ST.keepY = window.scrollY; route(); }
+  if (window.APPVIEWS) { window.APPVIEWS.hooks.render = rerender; window.APPVIEWS.hooks.toast = function (t) { toast(t); }; }
+  // the app's own screens hand their taps to the app's view-only code; anything that would edit is ignored
+  function avAct(uid, act, v, b) {
+    var AV = window.APPVIEWS, rid = curRound();
+    pages.withAV(uid, function () { if (rid) AV.setRound(rid); var k = +b.getAttribute('data-k'); if (/^(wkday|wkdayclose|prday|prmoredays)$/.test(act)) AV.prDayAct(act, v); else AV.act(act, v, b, k); });
+  }
+  function appClick(ev, el, act, v) {
+    var uid = curUid(), rid = curRound(); if (!uid || !pages) return;
+    ev.preventDefault();
+    if (el.hasAttribute('data-na') || el.disabled) return;
+    if (act === 'goHole') { if (rid) location.hash = H(uid, 'round/' + encodeURIComponent(rid) + '/hole/' + (+el.getAttribute('data-i') + 1)); return; }
+    if (act === 'setbl') { ST.bl[uid] = v; rerender(); return; }
+    if (act === 'sgtview') { location.hash = H(uid, 'test/' + encodeURIComponent(v)); return; }
+    if (act === 'sgttrend') { location.hash = H(uid, 'tests/trend'); return; }
+    if (act === 'sgthub') { location.hash = H(uid, 'tests'); return; }
+    if (act === 'sgtrow') { pages.withAV(uid, function () { window.APPVIEWS.sgt.act(act, v, el); }); return; }
+    if (!pages.ALLOWED[act]) return;
+    if (act === 'mgperiod' && CALC.PERIODS.some(function (p) { return p.id === v; })) { ST.period = v; lsSet(LS.period, v); }
+    avAct(uid, act, v, el);
+  }
   document.addEventListener('click', function (ev) {
+    var row = ev.target.closest('tr.clk[data-href]'); if (row && !ev.target.closest('a, button, select, input, label')) { location.hash = row.getAttribute('data-href'); return; }
     var el = ev.target.closest('[data-act]'); if (!el) return; var act = el.getAttribute('data-act'), v = el.getAttribute('data-v');
-    if (act === 'open') { if (ev.target.closest('a')) return; location.hash = '#/a/' + encodeURIComponent(el.getAttribute('data-uid')); window.scrollTo(0, 0); return; }
+    if (el.closest('.appui')) { appClick(ev, el, act, v); return; }
+    if (act === 'open') { if (ev.target.closest('a')) return; location.hash = '#/a/' + encodeURIComponent(el.getAttribute('data-uid')); return; }
+    var uid = curUid();
     if (act === 'period') { ST.period = v; lsSet(LS.period, v); route(); }
     else if (act === 'copycode') copy(copyTxt(), 'Invite copied');
     else if (act === 'refresh') pull();
     else if (act === 'reload') start();
     else if (act === 'csv') csv();
     else if (act === 'showall') { ST.showAll = !ST.showAll; route(); }
+    else if (act === 'markall') { markAll(el.getAttribute('data-uid')); route(); }
+    else if (act === 'rsort' && pages) { var R = pages.RS; if (R.sort === v) R.dir = -R.dir; else { R.sort = v; R.dir = v === 'course' ? 1 : -1; } rerender(); }
+    else if (act === 'rsplay' && pages) { pages.RS.play = v; rerender(); }
+    else if (act === 'prskill' && pages) { pages.PS.skill = v; rerender(); }
+    else if (act === 'prnew' && pages) { pages.PS.fresh = false; location.hash = H(uid, 'practice'); rerender(); }
+    else if (act === 'shotcat' && pages) { pages.SHOTS.cat = v; rerender(); }
+    else if (act === 'shotworst' && pages) { pages.SHOTS.worst = !pages.SHOTS.worst; rerender(); }
+    else if (act === 'setbl' && uid) { ST.bl[uid] = v; rerender(); }
+    else if (act === 'replay' && uid && pages) { ev.preventDefault(); avAct(uid, act, v, el); }
     else if (act === 'out') { var k = cacheKey(); API.signOut(); if (k) idbSet(k, null); ST.team = null; ST.athletes = {}; ST.sums = {}; ST.loaded = false; ST.login = { msg: 'You’re signed out.', err: '', busy: false, reset: false, email: '' }; location.hash = ''; route(); }
     else if (act === 'forgot') { ST.login.reset = true; ST.login.err = ''; ST.login.msg = ''; ST.login.email = (document.getElementById('em') || {}).value || ST.login.email; route(); }
     else if (act === 'back') { ST.login.reset = false; ST.login.err = ''; ST.login.msg = ''; ST.login.email = (document.getElementById('em') || {}).value || ST.login.email; route(); }
   });
-  document.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('.tr[data-act=open]')) { location.hash = '#/a/' + encodeURIComponent(ev.target.getAttribute('data-uid')); } });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('.acard[data-act=open]')) { location.hash = '#/a/' + encodeURIComponent(ev.target.getAttribute('data-uid')); } });
   document.addEventListener('input', function (ev) { if (ev.target.id === 'q') { ST.q = ev.target.value; var pos = ev.target.selectionStart; listView(); var q = document.getElementById('q'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (e) {} } } });
-  document.addEventListener('change', function (ev) { if (ev.target.id === 'sort') { ST.sort = ev.target.value; lsSet(LS.sort, ST.sort); route(); } });
+  document.addEventListener('change', function (ev) {
+    var t = ev.target; if (t.id === 'sort') { ST.sort = t.value; lsSet(LS.sort, ST.sort); route(); return; }
+    var uid = curUid(); if (!uid || !pages) return;
+    if (t.getAttribute('data-sel') === 'bench') { ST.bl[uid] = t.value; rerender(); return; }
+    if (t.closest && t.closest('.appui')) { var f = t.getAttribute('data-f'), AV = window.APPVIEWS;
+      if (f === 'proxbench') AV.view.proxBench = t.value; else if (f === 'baseline' && t.id === 'stbl') { AV.view.stBl = t.value || ''; AV.view.stSel = null; } else if (f === 'baseline' && t.id === 'histbl') AV.view.histBl = t.value || ''; else if (f === 'baseline' && t.id === 'mgbl') ST.bl[uid] = t.value; else return;
+      rerender(); }
+  });
+  document.addEventListener('input', function (ev) { if (ev.target.id === 'bzslider' && pages && curUid()) pages.withAV(curUid(), function () { window.APPVIEWS.data.bzUpdate(+ev.target.value); }); });
   document.addEventListener('submit', function (ev) {
     if (ev.target.id !== 'loginform') return; ev.preventDefault();
     var L = ST.login, em = (document.getElementById('em').value || '').trim(), pwEl = document.getElementById('pw'), pw = pwEl ? pwEl.value : ''; L.email = em; L.err = ''; L.msg = '';
@@ -266,7 +347,7 @@
     L.busy = true; route();
     API.signIn(em, pw).then(function () { L.busy = false; L.email = ''; ST.loaded = false; start(); }, function (e) { L.busy = false; L.err = authMsg(e); route(); });
   });
-  window.addEventListener('hashchange', route);
+  window.addEventListener('hashchange', function () { ST.keepY = null; route(); if (!ST.keepY) window.scrollTo(0, 0); });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && API.session() && ST.team && Date.now() - ST.last > 60000) pull(true); });
   setInterval(function () { if (document.visibilityState === 'visible' && API.session() && ST.team) { pull(true); var u = document.getElementById('upd'); if (u && ST.last) u.textContent = 'Updated ' + ago(ST.last); } }, 120000);
   setInterval(function () { var u = document.getElementById('upd'); if (u && ST.last && !ST.busy && !ST.err) u.textContent = 'Updated ' + ago(ST.last); }, 30000);

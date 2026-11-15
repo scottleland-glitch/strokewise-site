@@ -68,7 +68,13 @@ function simHole(r, i, form) {
     add(left, 'green', pick(r, ['short', 'long', 'left', 'right', 'shortleft', 'longright'])); d = left;
   }
   if (rows[rows.length - 1].loc !== 'holed') rows[rows.length - 1].loc = 'holed';
-  return { par, rows, finished: true };
+  // what the athlete would also enter: the club for each full shot, the read of each putt, the pin spot
+  const IRON = [[215, '4H'], [195, '5H'], [180, '5i'], [168, '6i'], [157, '7i'], [145, '8i'], [132, '9i'], [118, 'PW'], [100, '52'], [80, '56'], [0, '60']];
+  rows.forEach((row, k) => { if (row.loc === 'tee') row.club = par === 3 ? (IRON.find((x) => row.dist >= x[0]) || IRON[IRON.length - 1])[1] : (g('dist') > 255 || r() < .8 ? 'Driver' : '3W');
+    else if (row.loc === 'green' || row.loc === 'holed') { if (k > 0 && r() < .9) row.rd = pick(r, ['up', 'flat', 'down']) + '-' + pick(r, ['l', 's', 'r']); }
+    else if (row.loc !== 'green') row.club = (IRON.find((x) => row.dist >= x[0]) || IRON[IRON.length - 1])[1]; });
+  const PINS = ['backleft', 'backcenter', 'backright', 'midleft', 'center', 'midright', 'frontleft', 'frontcenter', 'frontright'];
+  return { par, rows, finished: true, pin: r() < .8 ? pick(r, PINS) : '' };
 }
 
 function formAt(sk, drift, f) { // f: 0 (oldest round) → 1 (newest); a drifting skill moves from its start to its end value
@@ -92,9 +98,10 @@ function buildAthlete(spec, idx, now) {
   if (idx === 7 || idx === 8) weights.chip = 3; if (idx === 1) { weights.short = .3; weights.lag = .3; } if (idx === 8) weights.chip = 0.3;
   if (spec.rounds) for (let d = 70; d >= 0; d -= 2) { if (r() < .35) continue; const keys = Object.keys(weights), tot = keys.reduce((s, k) => s + weights[k], 0); let x = r() * tot, sp = keys[0];
     for (const k of keys) { x -= weights[k]; if (x <= 0) { sp = k; break; } }
-    const iso = new Date(now - d * DAY).toISOString().slice(0, 10) + 'T12:00:00'; practice.push({ id: 'p' + idx + '_' + d, date: iso, player: spec.name, spoke: sp, focus: FOC[sp], min: pick(r, [20, 30, 30, 45, 60, 75]), type: pick(r, ['reps', 'mixed', 'game']) }); }
+    const iso = new Date(now - d * DAY).toISOString().slice(0, 10) + 'T12:00:00'; practice.push({ id: 'p' + idx + '_' + d, date: iso, player: spec.name, spoke: sp, focus: FOC[sp], min: pick(r, [20, 30, 30, 45, 60, 75]), type: pick(r, ['reps', 'mixed', 'game']), feel: pick(r, ['off', 'ok', 'ok', 'great']) }); }
+  if (spec.rounds && idx <= 4) { const ds = [6, 24, 52][idx % 3], big = idx === 4; practice.push({ id: 'p' + idx + '_lesson', date: new Date(now - (idx === 0 ? 6 : ds) * DAY).toISOString().slice(0, 10) + 'T10:00:00', player: spec.name, spoke: idx === 1 ? 'short' : 'chip', focus: idx === 1 ? 'Putting stroke' : 'Chipping setup', min: 60, kind: 'lesson', change: big ? 'big' : 'tune', coach: 'Coach Rivera', what: idx === 1 ? 'Stroke path' : 'Ball position', lesson: 'Narrow stance, weight forward', type: 'mixed', feel: 'great' }); }
   // short game tests: monthly
-  const nT = spec.rounds ? (idx === 6 ? 1 : 2 + (idx % 3)) : 0;
+  const nT = spec.rounds ? (idx === 6 ? 1 : idx === 1 ? 4 : 2 + (idx % 3)) : 0;
   for (let k = 0; k < nT; k++) { const age = idx === 6 ? 55 : (nT - 1 - k) * 28 + 6 + idx;
     const t = SGTEST.blank('t' + idx + '_' + k, new Date(now - age * DAY).toISOString(), spec.name, spec.bench); t.done = true;
     SGTEST.STATIONS.forEach((st, si) => { if (!SGTEST.inTest(t, st)) return; const q = formAt(spec.sk, spec.drift, 0.4 + 0.6 * (k / Math.max(1, nT - 1)));
@@ -133,8 +140,19 @@ async function load(base, now) {
     const up = { team: teamId, name: a.name, joined, stamp: now - 3600e3, profile: { j: JSON.stringify(a.profile) } };
     ['rounds', 'tests', 'practice'].forEach((k) => a[k].forEach((it) => { it.player = a.name; up[k + '/' + it.id] = { j: JSON.stringify(it), u: Date.parse(it.updated || it.date) || now }; }));
     // PATCH keys with slashes set nested paths
-    await put('PATCH', 'data/' + uid, tok, up); a.uid = uid;
+    await put('PATCH', 'data/' + uid, tok, up); a.uid = uid; a.tok = tok;
   }
   return { coach, teamId, athletes: out };
 }
-module.exports = { build, load, TEAM, DAY };
+// new items arriving from an athlete's phone after the coach has looked: { tests: n, practice: n, rounds: n }. Returns what it wrote.
+async function pushNew(base, a, kinds, now) {
+  const idx = TEAM.findIndex((t) => t.name === a.name), r = rng(9000 + idx * 31 + (kinds.salt || 0)), spec = a.spec, out = { rounds: [], tests: [], practice: [] }, iso = new Date(now).toISOString(), up = {};
+  for (let k = 0; k < (kinds.rounds || 0); k++) { const holes = roundHoles(r, formAt(spec.sk, spec.drift, 1)); out.rounds.push({ v: 3, dv: 2, id: 'rn' + idx + '_' + k + '_' + (kinds.salt || 0), date: iso, updated: iso, course: 'Lakeridge', baseline: spec.bench, player: spec.name, play: 'practice', holes }); }
+  for (let k = 0; k < (kinds.tests || 0); k++) { const t = SGTEST.blank('tn' + idx + '_' + k + '_' + (kinds.salt || 0), iso, spec.name, spec.bench); t.done = true; t.updated = iso;
+    SGTEST.STATIONS.forEach((st) => { if (!SGTEST.inTest(t, st)) return; const q = formAt(spec.sk, Object.assign({}, spec.drift, { lag: [spec.sk.lag, spec.sk.lag * 1.9] }), 1); t.shots[st.id] = st.shots.map((sp) => testShot(r, st, sp, q)); }); out.tests.push(t); }
+  for (let k = 0; k < (kinds.practice || 0); k++) out.practice.push({ id: 'pn' + idx + '_' + k + '_' + (kinds.salt || 0), date: iso.slice(0, 10) + 'T12:00:00', updated: iso, player: spec.name, spoke: 'chip', focus: 'Green-side chipping', min: 45, type: 'mixed', feel: 'ok' });
+  ['rounds', 'tests', 'practice'].forEach((k) => out[k].forEach((it) => { up[k + '/' + it.id] = { j: JSON.stringify(it), u: now }; })); up.stamp = now;
+  const r2 = await fetch(base + '/db/data/' + a.uid + '.json?auth=' + a.tok, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(up) }); if (!r2.ok) throw new Error('pushNew ' + r2.status);
+  return out;
+}
+module.exports = { build, load, pushNew, TEAM, DAY };
