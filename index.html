@@ -70,6 +70,20 @@
   .laptop-chrome img { display: block; width: 100%; height: auto; }
   .feat.stack .laptops figcaption { text-align: center; font-size: 14.5px; font-weight: 600; color: var(--soft); margin: 12px 0 0; }
 
+  .watchcopy { margin-top: 36px; padding-top: 32px; border-top: 1px solid var(--line); }
+  .badge { display: inline-block; font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: #eef0ec; color: #4a5d50; border-radius: 999px; padding: 5px 12px; margin-bottom: 12px; }
+  h3 { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: clamp(24px, 2.8vw, 30px); line-height: 1.15; margin: 0 0 10px; }
+  .wsteps { list-style: none; counter-reset: w; padding: 0; margin: 16px 0 14px; }
+  .feat .wsteps li { counter-increment: w; position: relative; padding: 0 0 0 38px; margin: 0 0 10px; color: var(--soft); line-height: 1.4; }
+  .feat .wsteps li b { color: var(--ink); }
+  .feat .wsteps li::before { content: counter(w); left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--green); color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .feat.stack .duo { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 34px; }
+  .duo .whero { margin: 0; width: 100%; max-width: 475px; }
+  .duo .whero img { display: block; width: 100%; height: auto; }
+  .duo .watches { display: flex; justify-content: center; gap: 12px; width: 100%; max-width: 900px; }
+  .duo .watches figure { flex: 1 1 0; max-width: 290px; margin: 0; min-width: 0; }
+  .duo .watches img { display: block; width: 100%; height: auto; }
+  .duo .watches figcaption { text-align: center; font-size: 14.5px; font-weight: 600; color: var(--soft); margin: 2px 0 0; }
 
   h2 { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: clamp(30px, 3.6vw, 42px); line-height: 1.12; margin: 0 0 16px; }
   .feat p { color: var(--soft); font-size: 18px; margin: 0 0 14px; }
@@ -109,6 +123,8 @@
     .feat.stack .laptop-chrome img { width: 100%; height: 430px; object-fit: cover; object-position: top; }
 
     .grid, .steps { grid-template-columns: 1fr; }
+    .duo .whero { max-width: 100%; }
+    @media (max-width: 640px) { .duo .watches { flex-direction: column; align-items: center; gap: 22px; } .duo .watches figure { flex: none; width: 100%; max-width: 250px; } }
     section { padding: 72px 0; } .feat + .feat { margin-top: 80px; }
     footer nav { margin-left: 0; }
   }
@@ -147,8 +163,28 @@
       <h2>Quick, simple shot entry</h2>
       <p>A few taps per shot: how far, where it finished, done. Your scorecard and stats are a tap away at any point in the round.</p>
       <ul><li>Par, yardage and hole index come from the scorecard</li><li>Works on the course with no signal</li></ul>
+      <div class="watchcopy">
+        <span class="badge">Apple Watch · coming soon</span>
+        <h3>Log every shot from your wrist</h3>
+        <p>Leave the phone in your bag. The watch app starts automatically with your round, works offline, and syncs to your phone.</p>
+        <ol class="wsteps">
+          <li><b>Start</b> a round on your phone. The watch app opens by itself.</li>
+          <li><b>Pick</b> where the shot finished, then the direction.</li>
+          <li><b>Set</b> the distance: yards off the green, feet on it.</li>
+          <li><b>Confirm</b>. Holing out finishes the hole, and undo is one tap.</li>
+          <li><b>Review</b> any hole on your wrist and edit a shot.</li>
+        </ol>
+        <ul><li>Shots queue on the watch with no signal and sync when your phone is in range</li><li>Strokes gained shows on your phone as usual</li></ul>
+      </div>
     </div>
-    <div class="phone"><img src="img/round.webp" alt="Entering the approach on hole 4 at Paradise Valley, after a tee shot to the fairway"></div>
+    <div class="duo">
+      <figure class="whero"><img src="img/watch-hero.webp" alt="The same hole on the phone and on an Apple Watch: hole 4, par 4, shot 2 from the fairway, 165 yards to the pin" width="950" height="1635"></figure>
+      <div class="watches">
+        <figure><img src="img/watch-distance.webp" alt="Apple Watch: setting the distance, 165 yards to the pin" width="650" height="800" loading="lazy"><figcaption>Set the distance</figcaption></figure>
+        <figure><img src="img/watch-holes.webp" alt="Apple Watch: the list of completed holes with scores in green and red" width="650" height="800" loading="lazy"><figcaption>Review your holes</figcaption></figure>
+        <figure><img src="img/watch-shots.webp" alt="Apple Watch: the five shots on hole 5 with an Add shot button" width="650" height="800" loading="lazy"><figcaption>Edit any shot</figcaption></figure>
+      </div>
+    </div>
   </div>
   <div class="feat stack">
     <div class="txt">
