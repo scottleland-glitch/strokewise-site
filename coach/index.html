@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coach dashboard – Strokewise</title>
+<meta name="description" content="Sign in to see every athlete on your team: strokes gained, rounds, trends and short game tests.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="coach.css">
+</head>
+<body>
+<header><div class="wrap nav">
+  <a class="brand" href="../"><img src="../img/icon-192.png" alt="">Strokewise</a>
+  <span class="navtag">Coach</span>
+  <nav id="topnav"></nav>
+</div></header>
+<main id="app" aria-live="polite"><div class="wrap"><p class="muted pad">Loading…</p></div></main>
+<noscript><div class="wrap"><p class="pad">The coach dashboard needs JavaScript.</p></div></noscript>
+<script src="config.js"></script>
+<script src="lib/sg.js"></script>
+<script src="lib/mygame.js"></script>
+<script src="lib/trends.js"></script>
+<script src="lib/shortgame.js"></script>
+<script src="api.js"></script>
+<script src="analyze.js"></script>
+<script src="charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
