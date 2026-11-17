@@ -6,9 +6,10 @@
   var CFG = window.COACH_CONFIG || {}, API = COACHAPI.create({ cfg: CFG }), CALC = COACHCALC, CH = COACHCHARTS, E = CH.esc;
   var LIBS = { SG: window.SG, MYGAME: window.MYGAME, TRENDS: window.TRENDS, SGTEST: window.SGTEST };
   var $app = document.getElementById('app'), $nav = document.getElementById('topnav');
-  var LS = { period: 'strokewise.coach.period', sort: 'strokewise.coach.sort', seen: 'strokewise.coach.seen.v1', seen2: 'strokewise.coach.seen.v2' };
-  var ST = { team: null, athletes: {}, loaded: false, busy: false, err: '', last: 0, period: lsGet(LS.period) || '3m', sort: lsGet(LS.sort) || 'latest', q: '', login: { msg: '', err: '', busy: false, reset: false, email: '' }, sums: {}, showAll: false, bl: {} };
+  var LS = { period: 'strokewise.coach.period', mgPeriod: 'strokewise.coach.mgperiod', sort: 'strokewise.coach.sort', seen: 'strokewise.coach.seen.v1', seen2: 'strokewise.coach.seen.v2' };
+  var ST = { team: null, athletes: {}, loaded: false, busy: false, err: '', last: 0, period: lsGet(LS.period) || '3m', mgPeriod: lsGet(LS.mgPeriod) || '', sort: lsGet(LS.sort) || 'latest', q: '', login: { msg: '', err: '', busy: false, reset: false, email: '' }, sums: {}, showAll: false, bl: {} };
   if (!CALC.PERIODS.some(function (p) { return p.id === ST.period; })) ST.period = '3m';
+  if (ST.mgPeriod && !CALC.PERIODS.some(function (p) { return p.id === ST.mgPeriod; }) && !/^r[1-4]$/.test(ST.mgPeriod)) ST.mgPeriod = '';
   var CUR = '';
   var DAY = 864e5, MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -299,7 +300,7 @@
     if (act === 'sgthub') { location.hash = H(uid, 'tests'); return; }
     if (act === 'sgtrow') { pages.withAV(uid, function () { window.APPVIEWS.sgt.act(act, v, el); }); return; }
     if (!pages.ALLOWED[act]) return;
-    if (act === 'mgperiod' && CALC.PERIODS.some(function (p) { return p.id === v; })) { ST.period = v; lsSet(LS.period, v); }
+    if (act === 'mgperiod') { ST.mgPeriod = v; lsSet(LS.mgPeriod, v); if (CALC.PERIODS.some(function (p) { return p.id === v; })) { ST.period = v; lsSet(LS.period, v); } }
     avAct(uid, act, v, el);
   }
   document.addEventListener('click', function (ev) {

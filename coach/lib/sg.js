@@ -248,6 +248,15 @@
     if (lie === 'holed') return 0;
     return lie === 'green' ? dist / 3 : dist;
   }
+  // v230: a tee-shot "distance hit" over ~450 yd, or clearly longer than the hole, is not a real drive
+  // (wrong leftover, units, or a Long dir far from the green). 40 yd past the hole covers a drive through a short green.
+  var TEE_HIT_MAX_YD = 450, TEE_HIT_PAST_YD = 40;
+  function saneTeeHit(hit, yards) {
+    if (hit == null || !isFinite(hit) || hit <= 0) return null;
+    if (hit > TEE_HIT_MAX_YD) return null;
+    if (yards > 0 && hit > yards + TEE_HIT_PAST_YD) return null;
+    return hit;
+  }
 
   // Scott's split (v125: one cutoff everywhere, the industry standard): SHORT GAME / around the green = off the green
   // from 30 yd and in; APPROACH = every non-tee shot from over 30 yd (par-3 tee shots included). Approach ranges include
@@ -376,10 +385,13 @@
       var hd = normDir(s.dir || s.side), rel = DIR_ANGLE[hd], ya = toYards(start.lie, start.dist), yb = toYards(end.lie, end.dist);
       var nearEnd = end.lie === 'green' || (end.lie !== 'holed' && yb <= NEAR_YD), ang = null;
       if (pen !== 'ob' && end.lie !== 'holed') { ang = (((rel == null ? 270 : rel) + prevAng + 90) % 360 + 360) % 360; }
-      // distance hit: long adds (it went past the pin), short subtracts, a left / right finish by the green = straight line
+      // distance hit: near the green, long adds (it went past the pin), short subtracts, a left / right finish = straight line.
+      // Far from the green a Dir is a missed fairway, not a spot around the pin — always start minus leftover.
+      // (v230: "Long" on a tee shot used to add the leftover, e.g. 458 + 284 = 742 yd.)
       var hit = pen === 'ob' || s.retee ? null
-        : rel != null && (/^long/.test(hd) || nearEnd) ? Math.round(Math.sqrt(Math.max(0, ya * ya + yb * yb + 2 * ya * yb * Math.sin(rel * Math.PI / 180))))
+        : rel != null && nearEnd ? Math.round(Math.sqrt(Math.max(0, ya * ya + yb * yb + 2 * ya * yb * Math.sin(rel * Math.PI / 180))))
         : Math.round(ya - yb);
+      if (cat === 'tee') hit = saneTeeHit(hit, ya);
       out.push({
         n: i + 1, start: start, end: end, pen: pen, penStrokes: penStrokes,
         side: s.side || dirSide(normDir(s.dir)), dir: normDir(s.dir || s.side), ob: !!s.ob, retee: !!s.retee, loc: s.loc || (pen === 'ob' ? 'ob' : s.lie), hk: s.hk, eStart: eStart, eEnd: eEnd, sg: sg,
@@ -722,8 +734,15 @@
   }
 
   /* ===================== BACKUP / RESTORE ===================== */
+  // File-name safe player slug (letters and numbers, hyphenated). Used in backup file names.
+  function slug(name) {
+    var s = String(name || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    s = s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
+    return s === 'backup' ? 'backup-player' : s;
+  }
+
   // Backup file: { app: 'golf-shot-tracker', kind: 'rounds-backup', version: 1, exported: ISO, rounds: [...] }
-  function hasWedges(w) { var ok = function (o) { return !!(o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length); }; return !!(w && (ok(w.rows) || ok(w.low))); } // v94: High (rows) or Low (low) flight
+  function hasWedges(w) { var ok = function (o) { return !!(o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length); }; var grid = function (g) { return g && typeof g === 'object' && ((Array.isArray(g.clubs) && g.clubs.length) || (Array.isArray(g.rows) && g.rows.length)); }; return !!(w && (ok(w.rows) || ok(w.low) || grid(w.clock) || grid(w.ladder) || w.mode === 'clock' || w.mode === 'ladder')); } // v94: High (rows) or Low (low) flight; v227: clock matrix; v228: ladder matrix too
   function makeBackup(rounds, now, player, courses, bag, wedges, practice, sgtests) {
     var o = { app: 'golf-shot-tracker', kind: 'rounds-backup', version: 1, exported: (now || new Date()).toISOString(), count: rounds.length, rounds: rounds };
     if (player) o.player = player; if (courses && courses.length) o.courses = courses; if (bag && Array.isArray(bag.clubs) && bag.clubs.length) o.bag = bag;
@@ -771,6 +790,8 @@
   }
 
   // Empty round = no shot entered beyond (at most) a tee yardage on each hole.
+  // v219: a score on the 18-hole scale – 18 holes as played, a complete 9 doubled (for averages and Trends)
+  function score18(S) { return !S ? null : S.holesDone === 18 ? S.strokes : S.holesDone === 9 && S.holes.length === 9 ? S.strokes * 2 : null; }
   function roundEmpty(r) { return !(r.holes || []).some(function (h) { var rw = h.rows || []; return rw.length > 1 || rw.some(function (x) { return x.loc && x.loc !== 'tee'; }); }); }
   // Fold empty stub rounds into a real round played the same local day (course copied over if the real one has none).
   // Only rounds with no shots are ever removed, so no data can be lost. Returns { rounds, folded }.
@@ -912,14 +933,14 @@
   }
   // weighted strokes gained per entry over several rounds' buckets (null when there are none)
   function bucketAvg(list) { var n = 0, sg = 0; (list || []).forEach(function (b) { if (b && b.n) { n += b.n; sg += b.sg; } }); return n ? sg / n : null; }
-  var api = { puttMissGrid: puttMissGrid, statsFileName: statsFileName, CHIP_MAX_YD: CHIP_MAX_YD, BUNKER_MAX_YD: BUNKER_MAX_YD, BUNKER_BUCKET: BUNKER_BUCKET, CHIP_LIES: CHIP_LIES, CHIP_BANDS: CHIP_BANDS, FP_BANDS: FP_BANDS, puttBand: puttBand, chipLie: chipLie, chipBand: chipBand, statBuckets: statBuckets, bucketAvg: bucketAvg, PMISS_GROUPS: PMISS_GROUPS, puttsInside10: puttsInside10, trendAvg: trendAvg, lastN: lastN, PMISS_MAX_FT: PMISS_MAX_FT, LAG_INSIDE_FT: LAG_INSIDE_FT, lagPutt: lagPutt, lagGood: lagGood, lagStats: lagStats, firstPutt: firstPutt, pmissList: pmissList, lagList: lagList, pmissGroup: pmissGroup, pmissClass: pmissClass, pmissStats: pmissStats, pmissScale: pmissScale, CLUBS: CLUBS, arrivalDepth: arrivalDepth, roundEmpty: roundEmpty, foldStubs: foldStubs, pdfSafe: pdfSafe, reportFileName: reportFileName, pinSegments: pinSegments, REPORT_GROUPS: REPORT_GROUPS, reportGroup: reportGroup, SHORT_MAX_YD: SHORT_MAX_YD, SHORT_BUCKET: SHORT_BUCKET, APPR_BUCKETS: APPR_BUCKETS, apprBucket: apprBucket, proxAfterFt: proxAfterFt, puttKind: puttKind, threePutts: threePutts, puttScale: puttScale, puttRadius: puttRadius, puttPlace: puttPlace, PUTT_BANDS: PUTT_BANDS, puttGroup: puttGroup, puttStats: puttStats, makeBackup: makeBackup, parseBackup: parseBackup, mergeRounds: mergeRounds, conflictsOf: conflictsOf, PROX_LIES: PROX_LIES, lieGroup: lieGroup, proxByLie: proxByLie, proxWarnings: proxWarnings, PROX_BUCKETS: PROX_BUCKETS, inBucket: inBucket, roundYd: roundYd, proxStats: proxStats, reachedGreen: reachedGreen, PIN_GRID: PIN_GRID, PIN_NAME: PIN_NAME, normPin: normPin, DIR8: DIR8, DIR_NAME: DIR_NAME, DIR_ANGLE: DIR_ANGLE, normDir: normDir, expected: expected, expectedPGA: expectedPGA, BASELINES: BASELINES, baseline: function (id) { return BL[id] || BL.pga; },
+  var api = { slug: slug, score18: score18, puttMissGrid: puttMissGrid, statsFileName: statsFileName, CHIP_MAX_YD: CHIP_MAX_YD, BUNKER_MAX_YD: BUNKER_MAX_YD, BUNKER_BUCKET: BUNKER_BUCKET, CHIP_LIES: CHIP_LIES, CHIP_BANDS: CHIP_BANDS, FP_BANDS: FP_BANDS, puttBand: puttBand, chipLie: chipLie, chipBand: chipBand, statBuckets: statBuckets, bucketAvg: bucketAvg, PMISS_GROUPS: PMISS_GROUPS, puttsInside10: puttsInside10, trendAvg: trendAvg, lastN: lastN, PMISS_MAX_FT: PMISS_MAX_FT, LAG_INSIDE_FT: LAG_INSIDE_FT, lagPutt: lagPutt, lagGood: lagGood, lagStats: lagStats, firstPutt: firstPutt, pmissList: pmissList, lagList: lagList, pmissGroup: pmissGroup, pmissClass: pmissClass, pmissStats: pmissStats, pmissScale: pmissScale, CLUBS: CLUBS, arrivalDepth: arrivalDepth, roundEmpty: roundEmpty, foldStubs: foldStubs, pdfSafe: pdfSafe, reportFileName: reportFileName, pinSegments: pinSegments, REPORT_GROUPS: REPORT_GROUPS, reportGroup: reportGroup, SHORT_MAX_YD: SHORT_MAX_YD, SHORT_BUCKET: SHORT_BUCKET, APPR_BUCKETS: APPR_BUCKETS, apprBucket: apprBucket, proxAfterFt: proxAfterFt, puttKind: puttKind, threePutts: threePutts, puttScale: puttScale, puttRadius: puttRadius, puttPlace: puttPlace, PUTT_BANDS: PUTT_BANDS, puttGroup: puttGroup, puttStats: puttStats, makeBackup: makeBackup, parseBackup: parseBackup, mergeRounds: mergeRounds, conflictsOf: conflictsOf, PROX_LIES: PROX_LIES, lieGroup: lieGroup, proxByLie: proxByLie, proxWarnings: proxWarnings, PROX_BUCKETS: PROX_BUCKETS, inBucket: inBucket, roundYd: roundYd, proxStats: proxStats, reachedGreen: reachedGreen, PIN_GRID: PIN_GRID, PIN_NAME: PIN_NAME, normPin: normPin, DIR8: DIR8, DIR_NAME: DIR_NAME, DIR_ANGLE: DIR_ANGLE, normDir: normDir, expected: expected, expectedPGA: expectedPGA, BASELINES: BASELINES, baseline: function (id) { return BL[id] || BL.pga; },
     CALIB_ROUND: CALIB_ROUND, catLoss: catLoss, analyzeHole: analyzeHole, summarize: summarize,
     rowsToShots: rowsToShots, shotsToRows: shotsToRows, migrateV2Rows: migrateV2Rows, v1ToRows: v1ToRows, holeYards: holeYards,
     rowUnit: rowUnit, isHoled: isHoled, isRetee: isRetee, holedKind: holedKind, lieOf: lieOf, distOf: distOf, rowStrokes: rowStrokes, isPenalty: isPenalty,
     YARDS: YARDS, OFF_GREEN: OFF_GREEN, FEET: FEET, PUTTS: PUTTS,
     // v150: the ONE place the app version lives – must equal the sw.js cache name ('golf-sg-' + VERSION). It sits in a cached file,
     // so Settings shows the version of the code actually running (config.js is network-first and could run ahead).
-    VERSION: 'v218' };
+    VERSION: 'v230' };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.SG = api;
 })(this);

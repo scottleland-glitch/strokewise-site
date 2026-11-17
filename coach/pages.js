@@ -163,7 +163,7 @@
     // ---------- the app's screens (Stats, My Game, Trends, plan, compare, birdie) ----------
     function pageHead(title, sub, right) { return '<div class="rhead"><div><h2>' + title + '</h2><div class="sub">' + sub + '</div></div>' + (right || '') + '</div>'; }
     function appPage(uid, key, title, sub, inner, withPeriod) {
-      return pageHead(title, sub, withPeriod ? periodSeg() : '') + '<div class="apphost">' + withAV(uid, function (A, P, bl) { if (withPeriod) AV.view.mgPeriod = ST.period; return panel(inner(A, P, bl), 'full ' + key); }) + '</div>';
+      return pageHead(title, sub, withPeriod ? periodSeg() : '') + '<div class="apphost">' + withAV(uid, function (A, P, bl) { if (withPeriod) AV.view.mgPeriod = ST.mgPeriod || ST.period; return panel(inner(A, P, bl), 'full ' + key); }) + '</div>'; // v230: Last rounds r1–r4 stay on ST.mgPeriod so a rerender doesn't wipe them
     }
     function statsPage(uid) { return appPage(uid, 'stats', 'Stats', 'The app’s Stats screen: pick one round, the last 5 or all of them. Maps, putts, clubs, benchmarks.', function () { return AV.html.stats(); }); }
     function mygamePage(uid) { return appPage(uid, 'mygame', 'My Game', 'Shape of the game, benchmarks, forecasts with ranges, miss patterns. Same screen as the app.', function () { return AV.html.myGame(); }, true); }
