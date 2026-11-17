@@ -168,7 +168,7 @@
 .appui .seg button { flex: 1; min-height: 48px; font-size: 17px; font-weight: 800; border: 1px solid var(--line); border-radius: 16px; background: #fff; color: #000; }
 .appui .seg button.sel { background: #000; color: #fff; }
 .appui .mapsum { margin: 6px 0; font-size: 17px; }
-/* v230: cap hole maps (fairway / GIR / misses) at phone width so a desktop coach window does not blow them up; a 390px phone is unchanged. */
+/* v230: cap hole maps (fairway / GIR / misses) at phone width so a desktop or coach window does not blow them up; a 390px phone is unchanged. */
 .appui .mapview svg { display: block; width: 100%; max-width: 400px; height: auto; margin: 0 auto; border: 1px solid var(--line); border-radius: 16px; }
 .appui .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0; font-size: 15px; font-weight: 700; }
 .appui .legend span { display: flex; align-items: center; gap: 6px; }
@@ -252,6 +252,14 @@
 .appui .notice.good { background: #d6f5dc; border-color: #0a7a2a; color: #064d1a; }
 .appui .notice.bad { background: #ffe1e4; border-color: #e0102a; color: #9b0016; }
 .appui .notice.remind { background: #fff6cc; border-color: #b38f00; color: #5c4700; }
+/* v223: dismissible backup reminder (Home + Settings) */
+.appui .bknote { padding: 12px 14px; border-radius: 18px; border: 1px solid #c9a227; background: #fff6cc; color: #3d2e00; text-align: left; }
+.appui .bknote p { margin: 0 0 10px; font-size: 15px; font-weight: 650; line-height: 1.35; }
+.appui .bkacts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.appui .bkgo, .appui .bkno { border-radius: 999px; padding: 8px 14px; font-size: 15px; font-weight: 700; border: 1px solid transparent; }
+.appui .bkgo { background: #1f7a44; border-color: #196638; color: #fff; }
+.appui .bkno { background: transparent; border-color: rgba(61, 46, 0, .28); color: #3d2e00; font-weight: 650; }
+.appui .bknote-home { width: min(340px, calc(100% - 36px)); background: rgba(255, 246, 214, .92); box-shadow: 0 8px 24px rgba(0,0,0,.22); }
 .appui .hrow { display: flex; gap: 6px; align-items: stretch; margin: 6px 0; }
 .appui .hrow .hist { flex: 1 1 auto; margin: 0; min-width: 0; }
 .appui .hrow .hscore { text-align: right; }
@@ -520,6 +528,7 @@
 .appui .archivepage .notice.good { background: rgba(225, 245, 230, .85); color: #1d4d2b; }
 .appui .archivepage .notice.bad { background: rgba(255, 228, 230, .85); color: #8e1f2b; }
 .appui .archivepage .notice.remind { background: rgba(255, 246, 214, .85); color: #5c4700; }
+.appui .archivepage .bknote { background: rgba(255, 246, 214, .9); margin: 10px 0 8px; box-shadow: none; }
 .appui .archivepage .playerbox button, .appui .archivepage .odcard button { border-radius: 999px; }
 .appui .archivepage button.primary, .appui .archivepage .odcard button.primary { background: linear-gradient(180deg, #a9cdf0, #7fb2e5); border-color: #79a9da; color: #0e2a44; }
 .appui .archivepage h2 { font-weight: 600; color: var(--frost-ink); }
@@ -934,6 +943,109 @@
 .appui .wedgepage .wflight { display: flex; gap: 4px; padding: 4px; margin: 0 0 12px; border-radius: 16px; background: rgba(255, 255, 255, .45); border: 1px solid rgba(23, 48, 31, .08); }
 .appui .wedgepage .wflight button { flex: 1; min-height: 40px; border: 0; border-radius: 12px; background: none; box-shadow: none; font-size: 15px; font-weight: 400; color: var(--frost-ink-soft, #3f5a48); transform: none; }
 .appui .wedgepage .wflight button.on { background: rgba(255, 255, 255, .92); color: var(--frost-ink, #17301f); font-weight: 600; box-shadow: 0 1px 4px rgba(23, 48, 31, .10); }
+/* ---------- v227 Wedge matrix: Yardages | Clock, clock table + picker ---------- */
+/* v228: Yardages | Clock | Ladder; ladder grid + cell card */
+.appui .wedgepage .wmode { margin-bottom: 10px; }
+.appui .wedgepage .wmode button { font-size: 14px; font-weight: 600; padding: 0 4px; }
+.appui .wedgepage .wclockcard { padding: 8px 6px 12px; margin: 0 0 12px; overflow: hidden; }
+.appui .wedgepage .wclockwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.appui .wedgepage table.wclock { width: 100%; border-collapse: collapse; min-width: 280px; }
+.appui .wedgepage table.wclock th, .appui .wedgepage table.wclock td {
+  text-align: center; padding: 10px 4px; font-size: 16px; font-weight: 600; color: var(--frost-ink, #1a2230);
+  border-bottom: 1px solid rgba(26, 34, 48, .08); vertical-align: middle;
+}
+.appui .wedgepage table.wclock thead th { font-size: 13px; font-weight: 700; letter-spacing: .02em; padding: 6px 4px 8px; border-bottom: 1px solid rgba(26, 34, 48, .16); }
+.appui .wedgepage table.wclock .wclklbl { text-align: left; font-weight: 700; font-size: 14px; padding-left: 4px; white-space: nowrap; }
+.appui .wedgepage table.wclock tbody tr:last-child th, .appui .wedgepage table.wclock tbody tr:last-child td { border-bottom: 0; }
+.appui .wedgepage table.wclock td { font-variant-numeric: tabular-nums; }
+.appui .wedgepage table.wclock td.wclkempty { font-weight: 400; color: var(--frost-ink-soft, #445064); }
+.appui .wedgepage table.wclock input {
+  width: 100%; max-width: 56px; margin: 0 auto; display: block; text-align: center; box-sizing: border-box;
+  font-size: 16px; font-weight: 600; padding: 7px 2px; border-radius: 10px;
+  border: 1px solid rgba(26, 34, 48, .16); background: rgba(255,255,255,.92); color: inherit;
+}
+.appui .wedgepage .wclktime {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 36px; padding: 0 8px; margin: 0;
+  border-radius: 10px; border: 1px solid rgba(26, 34, 48, .14); background: rgba(255,255,255,.88);
+  font-size: 14px; font-weight: 700; color: inherit; box-shadow: none; transform: none;
+}
+.appui .wedgepage .wclktime.ro { border: 0; background: none; min-height: 0; padding: 0; }
+.appui .wedgepage .wclktime:not(.ro)::after { content: ''; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; opacity: .45; margin-left: 4px; }
+.appui .wedgepage .wclkx {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; margin-left: 1px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: var(--frost-ink-soft, #445064); font-size: 18px; font-weight: 500; box-shadow: none; transform: none; line-height: 1;
+}
+.appui .wedgepage .wclktools { display: flex; flex-direction: column; gap: 8px; padding: 10px 4px 0; }
+.appui .wedgepage .wclktools > .frostbtn { min-height: 44px; box-shadow: none; }
+.appui .wedgepage .wclkaddc { display: flex; gap: 8px; align-items: center; }
+.appui .wedgepage .wclkaddc input { flex: 1; min-width: 0; }
+.appui .wclkpick { position: fixed; inset: 0; z-index: 70; background: rgba(20, 30, 40, .28); display: flex; align-items: flex-end; justify-content: center; padding: 12px 10px calc(12px + env(safe-area-inset-bottom)); }
+.appui .wclkpick-card {
+  width: 100%; max-width: 390px; max-height: calc(100% - 24px); overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 16px 14px 14px; border-radius: 26px;
+  background: rgba(248, 250, 252, .96);
+  -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid rgba(255,255,255,.8);
+  box-shadow: 0 10px 40px rgba(20, 35, 50, .22);
+  color: #1a2230;
+}
+.appui .wclkpick-h { margin: 0; font-size: 18px; font-weight: 700; }
+.appui .wclkface-wrap { position: relative; width: 228px; height: 228px; margin: 2px auto 4px; }
+.appui .wclkface { width: 100%; height: 100%; display: block; }
+.appui .wclkface .wclk-ring { stroke: rgba(26, 34, 48, .28); stroke-width: 1.25; }
+.appui .wclkface .wclk-tick { stroke: rgba(26, 34, 48, .32); stroke-width: 1; stroke-linecap: square; }
+.appui .wclkface .wclk-tick.major { stroke: rgba(26, 34, 48, .5); stroke-width: 1.5; }
+.appui .wclkface .wclk-hub { fill: #1a2230; }
+.appui .wclkface .wclk-num { fill: #445064; font-size: 11px; font-weight: 600; font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; }
+.appui .wclkface .wclk-hand { stroke: #1b8a8c; stroke-width: 1.75; stroke-linecap: round; }
+.appui .wclkdot {
+  position: absolute; left: 0; top: 0;
+  width: 14px; height: 14px; min-width: 14px; min-height: 14px; margin: 0; padding: 0; border-radius: 50%;
+  border: 1.5px solid rgba(26, 34, 48, .4); background: rgba(255,255,255,.95);
+  font-size: 0; box-shadow: none; line-height: 0;
+  transform: translate(-50%, -50%);
+}
+.appui .wclkdot:active { transform: translate(-50%, -50%) scale(.9); }
+.appui .wclkdot.on { background: #1b8a8c; border-color: #1b8a8c; width: 16px; height: 16px; min-width: 16px; min-height: 16px; }
+.appui .frostpage.theme-sky .wclkchips .frostchip.sel { background: #1b8a8c; border-color: #1b8a8c; color: #fff; }
+.appui .wedgepage .wclkx { min-height: 24px; }
+.appui .wedgepage .wclktime { min-height: 36px; }
+.appui .wclkchips { flex-wrap: wrap; justify-content: center; }
+.appui .wclkpick-card .wnote { width: 100%; box-sizing: border-box; }
+.appui .wclkpick-card .wclkdone { width: 100%; min-height: 48px; margin: 2px 0 0; box-shadow: none; }
+
+.appui .wedgepage .wclockcard.wladcard { padding: 8px 8px 12px; overflow: hidden; }
+.appui .wedgepage table.wclock.wladderg { table-layout: fixed; min-width: 0; }
+.appui .wedgepage table.wclock.wladderg .wclklbl { width: 40px; padding-left: 2px; padding-right: 2px; }
+.appui .wedgepage table.wclock .wladpos { display: block; font-size: 15px; font-weight: 700; line-height: 1.15; }
+.appui .wedgepage table.wclock .wladclk { display: block; font-size: 10px; font-weight: 500; color: var(--frost-ink-soft, #445064); margin-top: 1px; letter-spacing: .02em; }
+.appui .wedgepage table.wclock td.wladcell { vertical-align: top; padding: 8px 1px; }
+.appui .wedgepage table.wclock .wlady { display: block; font-size: 16px; font-weight: 700; line-height: 1.15; font-style: normal; }
+.appui .wedgepage table.wclock .wladsetup {
+  display: block; font-size: 9px; font-weight: 500; color: var(--frost-ink-soft, #445064);
+  margin-top: 2px; line-height: 1.2; letter-spacing: -.03em; white-space: nowrap;
+}
+.appui .wedgepage table.wclock button.wladtap {
+  width: 100%; min-height: 52px; margin: 0; padding: 6px 2px;
+  border-radius: 10px; border: 1px solid rgba(26, 34, 48, .14); background: rgba(255,255,255,.9);
+  box-shadow: none; transform: none; color: inherit; line-height: 1.15;
+}
+.appui .wedgepage table.wclock button.wladtap.empty { font-weight: 400; color: var(--frost-ink-soft, #445064); }
+.appui .wladpick-card { align-items: stretch; gap: 8px; }
+.appui .wladpick-card .wclkpick-h { text-align: center; }
+.appui .wladyd { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--frost-ink-soft, #445064); }
+.appui .wladyd input {
+  width: 100%; box-sizing: border-box; text-align: center;
+  font-size: 28px; font-weight: 700; padding: 10px 8px; border-radius: 14px;
+  border: 1px solid rgba(26, 34, 48, .16); background: rgba(255,255,255,.95); color: #1a2230;
+  font-variant-numeric: tabular-nums;
+}
+.appui .wladseglbl { margin: 8px 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--frost-ink-soft, #445064); }
+.appui .wladpick-card .wladrow { margin: 0; }
+.appui .wladpick-card .wladrow button { font-weight: 600; font-size: 15px; min-height: 42px; }
+
 /* ---------- v96 Round stats: top box, Quick view, collapsible stat tiles, small legend ---------- */
 .appui .rstop { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; margin: 6px 0 12px; background: rgba(255, 255, 255, .62);
   border: 1px solid var(--frost-line, rgba(23, 48, 31, .1)); border-radius: 20px; overflow: hidden; box-shadow: 0 4px 16px rgba(20, 45, 30, .08); }
@@ -1141,7 +1253,7 @@
 .appui .histpage .mvall { margin: 0 auto 8px; min-height: 34px; font-size: 14px; }
 .appui .histpage .topbar .title span, .appui .histpage .topbar .frostbtn { white-space: nowrap; }
 .appui .histpage .topbar .title { min-width: 0; }
-/* ---------- v102 My Bag: Bag | Wedge ladder toggle ---------- */
+/* ---------- v102 My Bag: Bag | Wedge matrix toggle ---------- */
 .appui .bagpage .bagseg { display: flex; gap: 4px; padding: 4px; margin: 0 0 12px; border-radius: 999px; background: rgba(255, 255, 255, .5); border: 1px solid rgba(23, 48, 31, .1); }
 .appui .bagpage .bagseg button { flex: 1; min-height: 42px; margin: 0; border: 0; border-radius: 999px; background: none; box-shadow: none; font-size: 16px; font-weight: 500; color: var(--frost-ink-soft, #3f5a48); transform: none; }
 .appui .bagpage .bagseg button.on { background: #fff; color: var(--frost-ink, #17301f); font-weight: 600; box-shadow: 0 1px 5px rgba(23, 48, 31, .12); }
@@ -2141,6 +2253,9 @@
 .appui .rpclegend .rpcsolid { height: 3px; border-radius: 2px; background: linear-gradient(90deg, #1f73c9 0 33%, #2e9d4f 33% 66%, #e8871e 66%); }
 .appui .rpclegend .rpcdash { border-top: 2px dashed #1f2d38; }
 .appui .dirgrid button:disabled { opacity: .32; background: #f1f3f4; } /* v153: Short / Long off for out of bounds */
+.appui .roundpage .dirgrid button:disabled { opacity: 1; background: #e8eaed; color: #8a9096; border-color: #d0d4d8; box-shadow: none; } /* v231: Long clearly greyed on Fairway */
+.appui .roundpage .dirgrid button:disabled span { opacity: .45; }
+.appui .roundpage .sheet .dirnote { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: #3f4c58; line-height: 1.35; }
 
 /* v154: ‹ Round stats on a reviewed hole, beside Share live */
 .appui .holetop { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: -2px 0 8px; }
@@ -2643,7 +2758,7 @@
   border-radius: 12px; padding: 0 26px 0 10px; font: 600 15px/34px -apple-system, "Helvetica Neue", system-ui, sans-serif; color: #1d2a24; box-shadow: none; width: auto; }
 .appui .sc2 .dd.ddtxt { display: inline-block; background-image: none; padding: 0 10px; color: #43524a; font-weight: 500; }
 .appui .sc2 .sc-mid select.dd { font-size: 13.5px; max-width: 116px; } .appui .sc2 .sc-fin select.dd { font-size: 16px; }
-.appui .sc2 .sc-dirrow { display: flex; justify-content: flex-end; margin-top: 8px; } .appui .sc2 .sc-dirsel { font-weight: 500 !important; font-size: 14px !important; }
+.appui .sc2 .sc-dirrow { display: flex; justify-content: flex-end; margin-top: 8px; gap: 8px; align-items: center; position: relative; } .appui .sc2 .sc-dirsel { font-weight: 500 !important; font-size: 14px !important; position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; } /* v231: Direction opens the 8-way sheet (Long can be greyed out); the <select> stays for tests */
 .appui .sc2 .sc-layup { display: flex; justify-content: center; margin: 10px 0 0; font-size: 13px; color: #5c6b63; }
 .appui .sc2 .tpen { font-style: normal; display: inline-block; background: #fde3de; color: #b0473f; font-weight: 800; font-size: 12px; border-radius: 8px; padding: 2px 6px; }
 .appui .sc2 .ddwrap { position: relative; display: inline-block; max-width: 100%; vertical-align: middle; }
@@ -2986,12 +3101,14 @@
 .appui .wkchart { display: block; width: 100%; height: auto; } .appui .wkchart .wkgrid { stroke: rgba(23, 48, 31, .09); } .appui .wkchart .wkbase { stroke: rgba(23, 48, 31, .35); }
 .appui .wkchart .wkax { font-size: 9.5px; fill: #5b6b78; } .appui .wkchart .wkax.now { fill: #17301f; font-weight: 700; } .appui .wkchart .wkdtot { font-size: 9px; font-weight: 700; fill: #17301f; }
 .appui .wkchart .pg0, .appui .pglegend .pg0 { fill: #3f7fbf; background: #3f7fbf; } .appui .wkchart .pg1, .appui .pglegend .pg1 { fill: #d39b2a; background: #d39b2a; }
-.appui .wkchart .pg2, .appui .pglegend .pg2 { fill: #3f9a63; background: #3f9a63; } .appui .wkchart .pg3, .appui .pglegend .pg3 { fill: #7a5ab0; background: #7a5ab0; }
-.appui .wkchart .band { fill-opacity: .78; stroke: #fff; stroke-width: .6; } .appui .wkchart .wktotal { fill: none; stroke: #17301f; stroke-width: 1.4; }
-.appui .wkchart .wktgtline { stroke: #17301f; stroke-width: 1; stroke-dasharray: 4 3; } .appui .wkchart .wkles { stroke: #6b5aa6; stroke-width: 1.4; stroke-dasharray: 2 2; } .appui .wkchart .wktour { font-size: 11px; }
-.appui .pglegend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; margin-top: 6px; font-size: 12px; color: #2f4a3a; font-weight: 600; }
+.appui .wkchart .pg2, .appui .pglegend .pg2 { fill: #3f9a63; background: #3f9a63; } .appui .wkchart .pg3, .appui .pglegend .pg3 { fill: #1b8a8c; background: #1b8a8c; }
+.appui .wkchart .pg4, .appui .pglegend .pg4 { fill: #c44e16; background: #c44e16; }
+.appui .wkchart .band { fill-opacity: .78; stroke: #fff; stroke-width: .6; stroke-linejoin: round; } .appui .wkchart .wktotal { fill: none; stroke: #17301f; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.appui .wkchart .wktgtline { stroke: #17301f; stroke-width: 1; stroke-dasharray: 4 3; } .appui .wkchart .wkles { stroke: #3d4f5c; stroke-width: 1.4; stroke-dasharray: 2 2; } .appui .wkchart .wktour { font-size: 11px; }
+.appui .pglegend { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 4px 0; margin-top: 6px; font-size: 12px; color: #2f4a3a; font-weight: 700; }
+.appui .pglegend .pglegrow { display: flex; flex-wrap: nowrap; justify-content: center; gap: 4px 14px; }
 .appui .pglegend span { display: inline-flex; align-items: center; gap: 5px; } .appui .pglegend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-.appui .leskey { display: inline-block; width: 0; height: 11px; border-left: 2px dashed #6b5aa6; vertical-align: -1px; margin: 0 2px; }
+.appui .leskey { display: inline-block; width: 0; height: 11px; border-left: 2px dashed #3d4f5c; vertical-align: -1px; margin: 0 2px; }
 .appui .wkchart .wktgtlab { paint-order: stroke; stroke: rgba(255, 255, 255, .9); stroke-width: 3px; stroke-linejoin: round; fill: #17301f; font-weight: 600; }
 /* v207 (Scott): the This week card full screen – tap to open, swipe down / ✕ / Back to close */
 .appui .weekcard:not(.isfull) { cursor: pointer; }
@@ -3095,7 +3212,7 @@
 .appui .dylist { list-style: none; margin: 0; padding: 0; } .appui .dylist li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid rgba(23, 48, 31, .1); }
 .appui .dylist li span { flex: 1; display: grid; gap: 2px; } .appui .dylist b { font-size: 17px; } .appui .dylist small { font-size: 13.5px; color: #5b6660; } .appui .dylist em { font-style: normal; font-weight: 700; font-size: 17px; }
 .appui .pgdot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
-.appui .pgdot.pg0, .appui .dybar .pg0 { background: #3f7fbf; } .appui .pgdot.pg1, .appui .dybar .pg1 { background: #d39b2a; } .appui .pgdot.pg2, .appui .dybar .pg2 { background: #3f9a63; } .appui .pgdot.pg3, .appui .dybar .pg3 { background: #7a5ab0; }
+.appui .pgdot.pg0, .appui .dybar .pg0 { background: #3f7fbf; } .appui .pgdot.pg1, .appui .dybar .pg1 { background: #d39b2a; } .appui .pgdot.pg2, .appui .dybar .pg2 { background: #3f9a63; } .appui .pgdot.pg3, .appui .dybar .pg3 { background: #1b8a8c; } .appui .pgdot.pg4, .appui .dybar .pg4 { background: #c44e16; }
 .appui .prday { border-top: 1px solid rgba(23, 48, 31, .1); }
 .appui .prdayh { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 0; border: 0; background: none; box-shadow: none; min-height: 0; color: inherit; font: inherit; text-align: left; border-radius: 0; }
 .appui .prdayh span { flex: 1; display: grid; min-width: 0; } .appui .prdayh b { font-size: 15px; font-weight: 600; } .appui .prdayh small { font-size: 12px; color: var(--frost-ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -3128,3 +3245,33 @@
 .appui .trchart .trdot { opacity: .55; } .appui .trchart .trdot.pr { fill: #fff; stroke: #17301f; stroke-width: 1.3; opacity: .8; }
 .appui .trchart .trend { fill: #17301f; } .appui .trchart .trmid { stroke-width: 2.6; stroke-dasharray: 7 5; }
 .appui .trwhy b { font-weight: 700; }
+/* v221: Practice page from the top down – Your week ahead · Your game and your training · This week · More */
+.appui .wacard { position: relative; border: 2px solid #1f6f4a; padding-top: 16px; }
+.appui .wax { position: absolute; right: 12px; top: 12px; width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 50%; border: 0; background: rgba(23, 48, 31, .08); color: #17301f; font-size: 15px; box-shadow: none; }
+.appui .waeye { display: block; font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: #1f6f4a; font-weight: 800; padding-right: 44px; }
+.appui .wacard h2 { font-size: 21px; line-height: 1.2; margin: 4px 44px 8px 0; }
+.appui .waline { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-top: 1px solid rgba(23, 48, 31, .08); }
+.appui .waline i { font-style: normal; font-size: 19px; line-height: 1.1; } .appui .waline span { display: grid; gap: 2px; } .appui .waline b { font-size: 15px; } .appui .waline small { font-size: 13px; color: var(--frost-ink-soft); line-height: 1.35; }
+.appui .wasec { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 12px 0 4px; } .appui .wasec b { font-size: 15px; } .appui .wasec span { font-size: 13px; color: var(--frost-ink-soft); text-align: right; }
+.appui .warow { display: grid; grid-template-columns: 84px 1fr 36px 92px; align-items: center; gap: 6px; padding: 4px 0; font-size: 13.5px; }
+.appui .wabar { position: relative; height: 12px; border-radius: 8px; background: rgba(23, 48, 31, .08); } .appui .wabar .wktgt { position: absolute; top: -3px; bottom: -3px; width: 3px; background: #17301f; border-radius: 2px; }
+.appui .wav { text-align: right; font-weight: 700; font-size: 13px; } .appui .wach { font-style: normal; font-size: 12px; color: var(--frost-ink-soft); text-align: right; } .appui .wach.up { color: #1f6f4a; font-weight: 800; } .appui .wach.keep { color: #2f63b8; font-weight: 700; }
+.appui .wawhy { font-size: 13.5px; background: rgba(31, 111, 74, .1); border-radius: 12px; padding: 10px 12px; margin: 10px 0 12px; line-height: 1.4; }
+.appui .wago { width: 100%; }
+.appui .gapcard h2 { font-size: 20px; line-height: 1.25; margin: 4px 0 4px; } .appui .gaplede { font-size: 13px; color: var(--frost-ink-soft); margin: 0 0 8px; }
+.appui .gapkey { display: flex; gap: 14px; font-size: 12px; color: var(--frost-ink-soft); margin: 0 0 6px; } .appui .gapkey i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.appui .gl { background: #e2705f; } .appui .gp { background: #3f78d0; }
+.appui .gaprow { display: grid; grid-template-columns: 116px 1fr; grid-template-rows: auto auto; column-gap: 10px; padding: 6px 0; border-top: 1px solid rgba(23, 48, 31, .08); }
+.appui .gapn { grid-row: 1 / 3; display: flex; align-items: center; justify-content: space-between; } .appui .gapn b { font-size: 14.5px; font-weight: 600; }
+.appui .gapar { font-style: normal; font-weight: 800; font-size: 16px; width: 18px; text-align: center; } .appui .gapar.up { color: #1f7a3f; } .appui .gapar.down { color: #c0392b; } .appui .gapar.flat, .appui .gapar.none { color: #7a857e; }
+.appui .gapb { display: flex; align-items: center; gap: 8px; height: 16px; } .appui .gbar { flex: 1; height: 8px; border-radius: 5px; background: rgba(23, 48, 31, .08); overflow: hidden; display: block; } .appui .gbar i { display: block; height: 100%; border-radius: 5px; }
+.appui .gapb em { font-style: normal; font-size: 12.5px; width: 52px; text-align: right; color: var(--frost-ink-soft); } .appui .gapb em.lost { color: #b23a2a; font-weight: 700; }
+.appui .gapfoot { font-size: 12px; color: var(--frost-ink-soft); margin: 8px 0 0; line-height: 1.4; }
+.appui .morecard { padding: 4px 16px; } .appui .morerow { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 14px 0; border: 0; border-top: 1px solid rgba(23, 48, 31, .08); background: none; box-shadow: none; min-height: 0; color: inherit; font: inherit; font-size: 15.5px; border-radius: 0; text-align: left; }
+.appui .morerow:first-child { border-top: 0; } .appui .morerow i { font-style: normal; font-size: 20px; transition: transform .15s; } .appui .morerow.open i { transform: rotate(90deg); }
+.appui .morecard .prlist { background: none; box-shadow: none; padding: 0 0 8px; margin: 0; border: 0; } .appui .morecard .prlist > .tkeye { display: none; }
+.appui .wacard, .appui .gapcard, .appui .morecard { display: block; } .appui .gapcard .tkeye { display: block; }
+.appui .wacard, .appui .gapcard { padding: 16px 16px 14px; } .appui .morecard { padding: 2px 16px; }
+.appui .wacard h2, .appui .gapcard h2 { font-weight: 800; }
+.appui .statspage .plcmp, .appui .statspage .plcmp * { font-weight: 400 !important; } .appui .statspage .plcmp h2 { font-weight: 500 !important; }
+.appui .statspage .plcmp h2 { font-size: 16px !important; line-height: 1.3; } .appui .statspage .plcmp p, .appui .statspage .plcmp td, .appui .statspage .plcmp th { font-size: 14px; }

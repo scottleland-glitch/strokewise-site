@@ -99,6 +99,11 @@ function buildAthlete(spec, idx, now) {
   if (spec.rounds) for (let d = 70; d >= 0; d -= 2) { if (r() < .35) continue; const keys = Object.keys(weights), tot = keys.reduce((s, k) => s + weights[k], 0); let x = r() * tot, sp = keys[0];
     for (const k of keys) { x -= weights[k]; if (x <= 0) { sp = k; break; } }
     const iso = new Date(now - d * DAY).toISOString().slice(0, 10) + 'T12:00:00'; practice.push({ id: 'p' + idx + '_' + d, date: iso, player: spec.name, spoke: sp, focus: FOC[sp], min: pick(r, [20, 30, 30, 45, 60, 75]), type: pick(r, ['reps', 'mixed', 'game']), feel: pick(r, ['off', 'ok', 'ok', 'great']) }); }
+  // Practice tab (v230 port): a second area on some days so "Each day, by group" and the rolling chart stack several groups.
+  // Its own random stream, so the rounds, tests and first-pass practice above are unchanged.
+  if (spec.rounds) { const r2 = rng(5000 + idx * 13), XS = ['lag', 'short', 'chip', 'wedges', 'irons', 'drive', 'bunker'];
+    for (let d = 70; d >= 0; d--) { if (r2() < .6) continue; const sp = pick(r2, XS);
+      practice.push({ id: 'p' + idx + '_x' + d, date: new Date(now - d * DAY).toISOString().slice(0, 10) + 'T17:00:00', player: spec.name, spoke: sp, focus: FOC[sp], min: pick(r2, [15, 20, 30, 30, 45]), type: pick(r2, ['reps', 'mixed', 'game']), feel: pick(r2, ['ok', 'ok', 'great']) }); } }
   if (spec.rounds && idx <= 4) { const ds = [6, 24, 52][idx % 3], big = idx === 4; practice.push({ id: 'p' + idx + '_lesson', date: new Date(now - (idx === 0 ? 6 : ds) * DAY).toISOString().slice(0, 10) + 'T10:00:00', player: spec.name, spoke: idx === 1 ? 'short' : 'chip', focus: idx === 1 ? 'Putting stroke' : 'Chipping setup', min: 60, kind: 'lesson', change: big ? 'big' : 'tune', coach: 'Coach Rivera', what: idx === 1 ? 'Stroke path' : 'Ball position', lesson: 'Narrow stance, weight forward', type: 'mixed', feel: 'great' }); }
   // short game tests: monthly
   const nT = spec.rounds ? (idx === 6 ? 1 : idx === 1 ? 4 : 2 + (idx % 3)) : 0;

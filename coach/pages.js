@@ -28,7 +28,7 @@
     function withAV(uid, fn) { var c = ctx(uid), bl = benchId(uid, c.P); if (depth++ === 0) AV.enter(c.A, bl); try { return fn(c.A, c.P, bl); } finally { if (--depth === 0) AV.leave(); } }
     // the app's wording, for the web: no "slip", no phone-only hints. Only text between tags and in labels is touched, never class names.
     function webText(html) {
-      var fix = function (t) { return t.replace(/\bSlipping\b/g, 'Trending down').replace(/\bSlipped\b/g, 'Dropped').replace(/\bslipping\b/g, 'trending down').replace(/\bslipped\b/g, 'dropped').replace(/\bslips\b/g, 'drops').replace(/\bslip\b/g, 'drop').replace(/tap a hole to edit · swipe for more/g, 'click a hole for its shots').replace(/\bTap a row to use it\b/g, 'Click a row to use it').replace(/\bpractise\b/g, 'practice'); };
+      var fix = function (t) { return t.replace(/\bSlipping\b/g, 'Trending down').replace(/\bSlipped\b/g, 'Dropped').replace(/\bslipping\b/g, 'trending down').replace(/\bslipped\b/g, 'dropped').replace(/\bslips\b/g, 'drops').replace(/\bslip\b/g, 'drop').replace(/tap a hole to edit · swipe for more/g, 'click a hole for its shots').replace(/\bTap a row to use it\b/g, 'Click a row to use it').replace(/\bpractise\b/g, 'practice').replace(/Swipe the chart for earlier weeks\./g, 'Scroll the chart sideways for earlier weeks.'); };
       return String(html).replace(/>([^<]+)</g, function (m, t) { return '>' + fix(t) + '<'; }).replace(/(aria-label|title)="([^"]*)"/g, function (m, a, t) { return a + '="' + fix(t) + '"'; });
     }
     function panel(html, cls) { return '<div class="appui ap ' + (cls || '') + '">' + webText(html) + '</div>'; }
@@ -168,7 +168,7 @@
     function statsPage(uid) { return appPage(uid, 'stats', 'Stats', 'The app’s Stats screen: pick one round, the last 5 or all of them. Maps, putts, clubs, benchmarks.', function () { return AV.html.stats(); }); }
     function mygamePage(uid) { return appPage(uid, 'mygame', 'My Game', 'Shape of the game, benchmarks, forecasts with ranges, miss patterns. Same screen as the app.', function () { return AV.html.myGame(); }, true); }
     function trendsPage(uid) { return appPage(uid, 'trends', 'Trends', 'Your athlete\'s score and each skill by week, with one dashed line for the next 3 weeks. Same screen as the app.', function () { return AV.html.trends(); }); }
-    function planPage(uid) { return practiceNav(uid, 'plan') + appPage(uid, 'plan', 'Practice plan', 'What the app would have this athlete practice next, ranked by strokes lost. Same page as the app.', function () { return AV.html.practice(); }); }
+    function planPage(uid) { return practiceNav(uid, 'plan') + appPage(uid, 'plan', 'Practice plan', 'What the app would have this athlete practice next, ranked by strokes lost. Same list as the app.', function () { return '<div class="frostpage theme-sky mygamepage practicepage">' + (AV.practice.plan() || '<p class="help">This athlete turned practice recommendations off, so the app shows no plan.</p>') + '</div>'; }); }
     function comparePage(uid) { return appPage(uid, 'compare', 'Best and worst rounds', 'Two rounds side by side, or the best 5 against the worst 5.', function () { return AV.html.compare(); }); }
     function birdiePage(uid, id) { return back(uid, 'round/' + encodeURIComponent(id), 'Round') + pageHead('Birdie zone', 'How many more birdies a longer hole-out range would make.', '') + withAV(uid, function () { AV.setRound(id); var v = AV.view; if (!v.bz || v.bz.rid !== id) { v.bz = { scope: 'round', rid: id, from: 'summary', R: 0 }; v.bzD = null; } return '<div class="apphost">' + panel(AV.html.birdie(), 'full birdie') + '</div>'; }); }
 
@@ -191,7 +191,48 @@
       return '<ul class="lst shotlst">' + L.map(function (s) { return '<li><a href="' + H(uid, 'round/' + encodeURIComponent(s.rid) + '/hole/' + s.hole) + '">' + fd(s.t) + ' · hole ' + s.hole + '</a> <span class="mut">' + E(s.text) + '</span> ' + sgv(s.sg, 2) + '</li>'; }).join('') + '</ul>'; }
 
     // ---------- Practice ----------
-    function practiceNav(uid, on) { return '<div class="subtabs"><a class="' + (on === 'log' ? 'on' : '') + '" href="' + H(uid, 'practice') + '">Practice log</a><a class="' + (on === 'plan' ? 'on' : '') + '" href="' + H(uid, 'plan') + '">Practice plan</a></div>'; }
+    function practiceNav(uid, on) { return '<div class="subtabs"><a class="' + (on === 'log' ? 'on' : '') + '" href="' + H(uid, 'practice') + '">Practice</a><a class="' + (on === 'plan' ? 'on' : '') + '" href="' + H(uid, 'plan') + '">Practice plan</a></div>'; }
+    // the app's Practice screen, card by card (AV.practice.* = the app's own card code, generated). Read-only on the web:
+    // no full-screen tap, no Log / + buttons, each Recent practice item opens that session's page.
+    function prCards(uid) {
+      return withAV(uid, function () {
+        AV.view.mgPeriod = ST.period; // the period buttons on this page (Strokes lost vs practice time uses it)
+        var PR = AV.practice, card = function (html, cls) { return html ? panel('<div class="frostpage theme-sky mygamepage practicepage prweb">' + html + '</div>', 'prc ' + cls) : ''; };
+        var tidy = function (html) { return String(html || '').replace(/ data-act="(wkfull|prfull)" role="button" tabindex="0" aria-label="[^"]*"/g, '')
+          .replace(/<div class="pritem2" data-id="([^"]+)">([\s\S]*?)<\/div>/g, function (m, id, inner) { return '<a class="pritem2 prlink" href="' + H(uid, 'practice/' + encodeURIComponent(id.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>'))) + '" aria-label="Open this practice">' + inner + '<i class="prgo" aria-hidden="true">›</i></a>'; }); };
+        var ahead = tidy(PR.ahead()), week = tidy(PR.week()), gap = tidy(PR.gap()), spider = tidy(PR.spider()), vs = tidy(PR.vs()), recent = tidy(PR.recent()), playing = tidy(PR.playing());
+        return (ahead ? '<div class="prahead">' + card(ahead, 'ahead') + '</div>' : '') + '<div class="prgrid">' +
+          '<div class="col">' + card(week, 'week') + card(gap, 'gap') + '</div>' +
+          '<div class="col">' + card(spider, 'spider') + card(vs, 'vs') + '</div>' +
+          '<div class="col">' + card(recent || '<div class="prlist prdays frost" id="prlist"><span class="tkeye">Recent practice</span><p class="help">Nothing logged yet.</p></div>', 'recent') + '</div>' +
+          '<div class="col">' + card(playing, 'playing') + '</div></div>';
+      });
+    }
+    // after render: the app's swipe pages (wkStart / swipeCard, which stay on the phone) – keep the dots in step, remember the page
+    // across re-renders, and on a computer add ‹ › and clickable dots. Hand-ported from the app's swipeCard() (see README).
+    function swipers(root2) {
+      [['weekcard', 'wkpages', 'wkPage'], ['prcard', 'prpages', 'prPage']].forEach(function (x) {
+        var card = root2.querySelector('#' + x[0]), c = card && card.querySelector('#' + x[1]); if (!c || c.getAttribute('data-sw')) return; c.setAttribute('data-sw', '1');
+        var dots = card.querySelector('.wkpdots'), n = c.querySelectorAll('.wkpage').length, PK = x[2];
+        var go = function (i) { i = Math.max(0, Math.min(n - 1, i)); c.scrollTo({ left: i * c.clientWidth, behavior: 'smooth' }); };
+        var sync = function (i) { AV.view[PK] = i; [].forEach.call(dots.querySelectorAll('i'), function (d, j) { d.classList.toggle('on', j === i); }); prev.disabled = i <= 0; next.disabled = i >= n - 1; };
+        dots.removeAttribute('aria-hidden'); dots.classList.add('swnav');
+        [].forEach.call(dots.querySelectorAll('i'), function (d, j) { d.setAttribute('role', 'button'); d.setAttribute('tabindex', '0'); d.setAttribute('aria-label', 'Page ' + (j + 1) + ' of ' + n); d.addEventListener('click', function (e) { e.stopPropagation(); go(j); }); d.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(j); } }); });
+        var prev = document.createElement('button'), next = document.createElement('button');
+        prev.className = next.className = 'swarr'; prev.type = next.type = 'button'; prev.textContent = '‹'; next.textContent = '›'; prev.setAttribute('aria-label', 'Previous chart'); next.setAttribute('aria-label', 'Next chart');
+        prev.addEventListener('click', function (e) { e.stopPropagation(); go(Math.round(c.scrollLeft / Math.max(1, c.clientWidth)) - 1); });
+        next.addEventListener('click', function (e) { e.stopPropagation(); go(Math.round(c.scrollLeft / Math.max(1, c.clientWidth)) + 1); });
+        dots.insertBefore(prev, dots.firstChild); dots.appendChild(next);
+        var pg = Math.min(n - 1, AV.view[PK] || 0); if (pg) c.scrollLeft = pg * c.clientWidth; sync(pg);
+        c.addEventListener('scroll', function () { var i = Math.round(c.scrollLeft / Math.max(1, c.clientWidth)); if (i !== AV.view[PK]) sync(i); }, { passive: true });
+      });
+    }
+    // a day tapped on "Each day, by group": open that day in Recent practice and scroll to it
+    function openDay(uid, t) {
+      var d = new Date(+t), k = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2), v = AV.view;
+      var days = AV.data.byDay(logsOf(uid)), i = -1; days.forEach(function (x, j) { if (x.k === k) i = j; }); if (i < 0) return null;
+      v.prOpen = v.prOpen || {}; v.prOpen[k] = true; if ((v.prDays || 10) <= i) v.prDays = Math.ceil((i + 1) / 10) * 10; return k;
+    }
     function spokeName(k) { return AV.data.CAT_NAME && false ? '' : (MG.SPOKES.filter(function (s) { return s.k === k; })[0] || { name: k }).name; }
     function logsOf(uid) { var A = ST.athletes[uid]; return MG.validPractice(A.practice || []).sort(function (a, b) { return Date.parse(b.date) - Date.parse(a.date) || (a.id < b.id ? 1 : -1); }); }
     function practicePage(uid, query) {
@@ -201,10 +242,11 @@
       var s = X.seenFor(uid), isFresh = function (e) { return isNew(uid, 'practice', e.id); };
       var shown = logs.filter(function (e) { return (sel === 'all' || e.spoke === sel) && (!onlyNew || isFresh(e)); });
       var m30 = 0, m90 = 0, n30 = 0, les = 0; logs.forEach(function (e) { var d = now - Date.parse(e.date); if (d <= 30 * DAY) { m30 += e.min; n30++; } if (d <= 90 * DAY) m90 += e.min; if (e.kind === 'lesson') les++; });
-      var h = practiceNav(uid, 'log') + pageHead('Practice', logs.length + ' sessions logged. Click one for the detail.', '');
+      var h = practiceNav(uid, 'log') + pageHead('Practice', 'The app’s Practice screen: the week by area and by day, 3 months of practice, practice against strokes lost, and every session. Click a session for the detail.', periodSeg());
       h += '<div class="tilesm">' + tile('Last 30 days', X.hm(m30), n30 + ' sessions') + tile('Last 90 days', X.hm(m90), (m90 ? Math.round(m90 / 13) : 0) + ' min a week') + tile('Lessons', les, 'logged in total') + tile('Sessions', logs.length, 'all time') + tile('New', logs.filter(isFresh).length, 'since you last looked') + '</div>';
+      h += prCards(uid);
       var skills = [['all', 'All skills']].concat(MG.SPOKES.map(function (x) { return [x.k, x.name]; }));
-      h += '<div class="card"><div class="cardhead"><div><h3>Sessions</h3></div><div class="chips" role="group" aria-label="Skill">' + skills.map(function (o) { return '<button data-act="prskill" data-v="' + o[0] + '" class="chip' + (sel === o[0] ? ' on' : '') + '">' + E(o[1]) + '</button>'; }).join('') + (onlyNew ? '<button class="chip on" data-act="prnew">New only ✕</button>' : '') + '</div></div>';
+      h += '<div class="card" id="prsessions"><div class="cardhead"><div><h3>All sessions</h3></div><div class="chips" role="group" aria-label="Skill">' + skills.map(function (o) { return '<button data-act="prskill" data-v="' + o[0] + '" class="chip' + (sel === o[0] ? ' on' : '') + '">' + E(o[1]) + '</button>'; }).join('') + (onlyNew ? '<button class="chip on" data-act="prnew">New only ✕</button>' : '') + '</div></div>';
       if (!shown.length) return h + '<p class="muted">Nothing matches.</p></div>';
       var days = AV.data.byDay(shown);
       h += '<div class="scroll"><table class="rt prac"><thead><tr><th>Date</th><th class="l">Skill</th><th class="l">Focus</th><th>Minutes</th><th class="l">Kind</th><th class="l">Feel</th></tr></thead><tbody>';
@@ -299,6 +341,7 @@
     }
     // after the page is in the DOM: the app's own tidy-up passes (info buttons, legend notes, heat colours)
     function after(root2, uid) {
+      try { swipers(root2); } catch (e) { if (window.console) console.error(e); }
       withAV(uid, function () { [].forEach.call(root2.querySelectorAll('.appui'), function (el) { try { AV.post.legend(el); AV.post.infoize(el); } catch (e) { if (window.console) console.error(e); } });
         try { AV.post.heat(); } catch (e) {} try { AV.post.stScroll(); } catch (e) {} });
       [].forEach.call(root2.querySelectorAll('.appui [data-act]'), function (el) { if (!ALLOWED[el.getAttribute('data-act')]) el.setAttribute('data-na', '1'); });
@@ -306,6 +349,6 @@
     var NAV = { goHole: 1, setbl: 1 }, ALLOWED = {};
     ('info mgperiod mgknow trzoom trwk strange stpick stpickev stpickclr stround stcmp stcat stpmb stcur stpt blminest blminehist tkknow stx map mapscope mapclose pinseg proxb proxlie clubsel heat pmg puttn cmpn cmpkind cmpgrp cmpside bzscope replay rpgreen rpgreenback rpghole rpclose wkoff wkfull wkclose prfull prclose plweek plbench sgtoggle prplan sgtrow sgttrend sgthub setbl goHole wkday wkdayclose prday prmoredays').split(' ').forEach(function (k) { ALLOWED[k] = 1; });
     function renderWeb(uid, parts, query) { var r = render(uid, parts, query); if (r && r.html) r.html = webText(r.html); return r; }
-    return { render: renderWeb, overlay: overlay, after: after, RS: RS, PS: PS, SHOTS: SHOTS, withAV: withAV, ALLOWED: ALLOWED, H: H };
+    return { render: renderWeb, overlay: overlay, after: after, openDay: openDay, RS: RS, PS: PS, SHOTS: SHOTS, withAV: withAV, ALLOWED: ALLOWED, H: H };
   };
 })(window);

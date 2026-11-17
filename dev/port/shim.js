@@ -1,7 +1,7 @@
 (function (root) {
   'use strict';
   // ---- the shim: stands in for the phone. The app's code below reads its data through these. Nothing here can write anywhere. ----
-  var SG = root.SG, MYGAME = root.MYGAME, TRENDS = root.TRENDS, SGTEST = root.SGTEST, INSIGHTS = root.INSIGHTS, PLAN = root.PLAN, BZ = root.BZ, FUN = root.FUN, COURSES = root.COURSES, BAG = root.BAG, WEDGES = root.WEDGES, STORY = root.STORY, NEAR = root.NEAR;
+  var SG = root.SG, MYGAME = root.MYGAME, TRENDS = root.TRENDS, SGTEST = root.SGTEST, INSIGHTS = root.INSIGHTS, PLAN = root.PLAN, BZ = root.BZ, FUN = root.FUN, COURSES = root.COURSES, BAG = root.BAG, WEDGES = root.WEDGES, STORY = root.STORY, NEAR = root.NEAR, WA = root.WA;
   var window = root, document = root.document, hooks = { render: function () {}, toast: function () {} };
   var mem = {}, localStorage = { getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; }, setItem: function () {}, removeItem: function () {} }; // the athlete's phone data is not here: always empty
   var CFG = {}, SYNCX = null, live = null, LIVE_DB = '', gdOn = false, gdState = {}, GDX = null;
@@ -23,5 +23,19 @@
       rsTop: rsTopHTML, scorecard: scorecardHTML, quick: quickViewHTML, takeaway: takeawayHTML, tiles: statTilesHTML, curves: roundParCurvesHTML, puttBrk: rsPuttBrkHTML, cmp: compareHTML, sgtResult: function () { return SGTUI.html(); } },
     post: { heat: applyHeat, legend: legendNotes, infoize: infoize, stScroll: stListScroll },
     data: { bzUpdate: bzUpdate, byDay: byDay, prWords: prWords, prTitle: prTitle, spokeOf: spokeOf, dayLabel: dayLabel, dayKey: dayKey, pgOf: pgOf, PRG: PRG, hmS: hmS, CAT_NAME: CAT_NAME, scorecard: scorecardData, statsRound: statsRound, statsData: statsData, mgData: mgData, trendsData: trendsData, planData: planData, rounds: function () { return rounds; }, round: round },
+    // the Practice page's cards one at a time (coach Practice tab), each built exactly as the app's practicePageHTML builds it
+    practice: {
+      week: function () { var who = mgWho(), P = planData(who); return recsOn(who) ? weekCardHTML(who, P) : weekCardHTML(who, P, true); },
+      ahead: function () { var who = mgWho(); return recsOn(who) ? weekAheadHTML(who, planData(who)) : ''; }, // v232: a coach always sees the week-ahead summary
+      gap: function () { return gapCardHTML(mgWho()); },
+      spider: function () { var who = mgWho(); return practiceOn(who) ? practiceCardHTML(who, mgData(who), 'spider') : ''; },
+      vs: function () { var who = mgWho(), rec = recentDaysHTML(practiceOf(who)); return practiceCardHTML(who, mgData(who), 'rest').replace(rec, ''); },
+      recent: function () { return recentDaysHTML(practiceOf(mgWho())); },
+      playing: function () { var who = mgWho(); return playingCardHTML(who, mgData(who), true); },
+      plan: function () { var who = mgWho(); return recsOn(who) ? planCardHTML(who, planData(who)) : ''; },
+      on: function () { return practiceOn(mgWho()); }, recs: function () { return recsOn(mgWho()); }
+    },
+    // a view-only preference held in this page's memory (never saved, never sent): e.g. Playing and practice "Compare with …"
+    pref: function (k, v) { if (v === undefined) return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; mem[k] = String(v); },
     sgt: SGTUI, setRound: function (id) { view.roundId = id; } };
 })(typeof self !== 'undefined' ? self : this);

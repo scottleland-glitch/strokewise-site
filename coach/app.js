@@ -300,6 +300,8 @@
     if (act === 'sgthub') { location.hash = H(uid, 'tests'); return; }
     if (act === 'sgtrow') { pages.withAV(uid, function () { window.APPVIEWS.sgt.act(act, v, el); }); return; }
     if (!pages.ALLOWED[act]) return;
+    if (act === 'wkday') { var dk = pages.openDay(uid, v); if (dk) { rerender(); var dh = document.querySelector('.appui .prdayh[data-v="' + dk + '"]'); if (dh) { dh.scrollIntoView({ block: 'center', behavior: 'smooth' }); dh.focus({ preventScroll: true }); } } return; } // a day on "Each day, by group" opens in Recent practice
+    if (act === 'plbench') { var AVp = window.APPVIEWS; AVp.pref('golfsg.plbench.v1', AVp.pref('golfsg.plbench.v1') === '1' ? '0' : '1'); rerender(); return; } // in memory only
     if (act === 'mgperiod') { ST.mgPeriod = v; lsSet(LS.mgPeriod, v); if (CALC.PERIODS.some(function (p) { return p.id === v; })) { ST.period = v; lsSet(LS.period, v); } }
     avAct(uid, act, v, el);
   }

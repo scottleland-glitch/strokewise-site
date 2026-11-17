@@ -158,8 +158,38 @@ const checks = []; const ok = (name, cond, extra) => { checks.push([name, !!cond
   const nPr = (await p.$$('.rt.prac tbody tr.clk')).length; ok('practice list shows every session', nPr === 28 + 2 - 0 || nPr >= 25, String(nPr));
   await p.click('.chip[data-v=chip]'); await p.waitForTimeout(300); ok('practice skill filter', (await p.$$('.rt.prac tbody tr.clk')).length < nPr); await p.click('.chip[data-v=all]');
   await p.screenshot({ path: OUT + '/06b-practice-list-full.png', fullPage: true });
+  // the app's Practice screen on the Practice tab (v230 port): weekly slider, My Practice, strokes lost vs practice, Recent practice, Playing and practice
+  { const has = async (s) => !!(await p.$(s));
+    ok('Practice tab: weekly slider with 3 pages (by area, each day, last 3 months)', (await p.$$('.prgrid #weekcard .wkpage')).length === 3 && /Each day, by group/i.test(await p.textContent('#weekcard')) && /Last 3 months · rolling 7 days/i.test(await p.textContent('#weekcard')) && (await p.$$('#weekcard svg.wkchart')).length === 2);
+    ok('Practice tab: legend has Putting / Short game / Wedges / Irons / Woods and the target key', /Putting[\s\S]*Short game[\s\S]*Wedges[\s\S]*Irons[\s\S]*Woods/.test(await p.innerText('#weekcard .wkpage[data-p="2"]')) && /dashed line = your weekly target/.test(await p.textContent('#weekcard')));
+    ok('Practice tab: Your week ahead (v232 coach review), no ✕ or Start this week', await has('.prahead #wacard') && !(await has('#wacard [data-act=waclose], #wacard [data-act=wago]')));
+    ok('Practice tab: game vs training, My Practice, strokes lost vs practice time, Recent practice, Playing and practice', await has('.prgrid #gapcard') && await has('.prgrid #prcard') && await has('.prgrid #prvs') && await has('.prgrid #prlist') && await has('.prgrid #plcard'));
+    ok('Practice tab: read-only (no full-screen tap, Log, +, Start a session, edit or delete)', !(await has('.prgrid [data-act=wkfull], .prgrid [data-act=prfull]')) && (await p.$$('.prgrid [data-act=prlog]:visible, .prgrid [data-act=sessopen]:visible, .prgrid [data-act=planlog]:visible, .prgrid [data-act=predit], .prgrid [data-act=prdelask], .prgrid input')).length === 0);
+    const pgOf = () => p.evaluate(() => { const c = document.getElementById('wkpages'); return Math.round(c.scrollLeft / c.clientWidth); });
+    await p.click('#weekcard .swarr >> nth=1'); await p.waitForTimeout(700); const pg1 = await pgOf();
+    ok('slider: › arrow goes to the next page and its dot lights', pg1 === 1 && await p.$eval('#weekcard .wkpdots i:nth-of-type(2)', (d) => d.classList.contains('on')), 'page ' + pg1);
+    await p.click('#weekcard .wkpdots i >> nth=2'); await p.waitForTimeout(700); ok('slider: clicking the 3rd dot shows Last 3 months', (await pgOf()) === 2);
+    await p.click('#weekcard [data-act=wkoff][data-k="1"]'); await p.waitForTimeout(600);
+    ok('slider: ‹ week arrow shows last week and keeps the page', /Last week/.test(await p.textContent('#weekcard .wknav b')) && (await pgOf()) === 2);
+    await p.click('#weekcard [data-act=wkoff][data-k="-1"]'); await p.waitForTimeout(500);
+    await p.click('#weekcard .wkpdots i >> nth=1'); await p.waitForTimeout(700);
+    const hits = await p.$$('#weekcard .wkhit'); if (hits.length) { const dv = await hits[0].getAttribute('data-v'); await hits[0].click({ force: true }); await p.waitForTimeout(800); }
+    ok('slider: clicking a day on "Each day" opens that day in Recent practice', hits.length === 0 || (await p.$$('#prlist .prday.open')).length >= 1);
+    if (!(await p.$('#prlist .prday.open'))) { await p.click('#prlist .prdayh >> nth=0'); await p.waitForTimeout(500); }
+    const link = await p.$('#prlist .prday.open a.prlink'); const href = link && await link.getAttribute('href');
+    if (link) { await link.click(); await p.waitForTimeout(600); }
+    ok('Recent practice: a session opens its practice page', !!href && /\/practice\/[^/]+$/.test(await hashOf()) && !!(await p.$('.tilesm')), href || 'no link');
+    await p.goBack(); await p.waitForSelector('.prgrid #plcard'); await p.waitForTimeout(400);
+    const pb0 = await p.getAttribute('#plbtog', 'aria-pressed'); await p.click('#plbtog'); await p.waitForTimeout(500);
+    ok('Playing and practice: "Compare with" works in the page only', pb0 === 'false' && (await p.getAttribute('#plbtog', 'aria-pressed')) === 'true' && D.writes.length === 0);
+    await p.click('#plbtog'); await p.waitForTimeout(300);
+    await p.click('.seg [data-act=period][data-v="30d"]').catch(() => {}); await p.waitForTimeout(400);
+    ok('period buttons re-draw Strokes lost vs practice time', !!(await p.$('#prvs')) && /30 days/.test(await p.textContent('.seg [data-act=period].on')));
+    await p.click('.seg [data-act=period][data-v="3m"]').catch(() => {}); await p.waitForTimeout(300);
+    const wide = await p.evaluate(() => { const g = document.querySelector('.prgrid'); return g ? g.getBoundingClientRect().width : 0; }); ok('Practice tab uses the full desktop width (two columns)', wide > 1000 && (await p.$$eval('.prgrid > .col', (c) => new Set(c.map((x) => Math.round(x.getBoundingClientRect().left))).size)) === 2, Math.round(wide) + 'px');
+    await p.screenshot({ path: OUT + '/06d-practice-tab-full.png', fullPage: true }); }
   await p.click('.rt.prac tr.clk td:nth-child(2) >> text=Lesson').catch(() => {}); await p.goto(BASE + '#/a/' + encodeURIComponent(J.uid) + '/practice/p1_lesson'); await p.waitForSelector('.kv'); ok('lesson detail shows coach, change and notes', /Coach Rivera/.test(await body()) && /Stroke path/.test(await body()));
-  await p.goto(BASE + '#/a/' + encodeURIComponent(J.uid) + '/practice'); await p.waitForSelector('.subtabs'); await p.click('.subtabs a:text-is("Practice plan")'); await p.waitForSelector('.appui.plan'); await p.waitForTimeout(500); ok('practice plan page (app’s plan) renders', /Practice next/.test(await p.textContent('.appui.plan')));
+  await p.goto(BASE + '#/a/' + encodeURIComponent(J.uid) + '/practice'); await p.waitForSelector('.subtabs'); await p.click('.subtabs a:text-is("Practice plan")'); await p.waitForSelector('.appui.plan'); await p.waitForTimeout(500); ok('practice plan page (app’s plan list) renders', (await p.$$('.appui.plan .planlist .planitem, .appui.plan #planahead')).length >= 1 && !(await p.$('.appui.plan #weekcard')));
   ok('plan page has no log / session / edit buttons', (await p.$$('.appui.plan button:visible')).length >= 0 && (await p.$$('.appui.plan [data-act=prlog]:visible, .appui.plan [data-act=sessopen]:visible, .appui.plan [data-act=planlog]:visible, .appui.plan [data-act=touredit]:visible')).length === 0);
   await p.screenshot({ path: OUT + '/06c-practice-plan-1440x900.png' });
 

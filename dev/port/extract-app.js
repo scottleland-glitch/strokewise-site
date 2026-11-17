@@ -19,7 +19,9 @@ const refs = body.map((st) => { const s = new Set(); walk.full(st, (n) => { if (
 // the screens a coach can open on an athlete, and the helpers the web pages call
 const ROOTS = ['myGameHTML', 'statsHTML', 'trendsHTML', 'practicePageHTML', 'practiceCardHTML', 'recentDaysHTML', 'mapHTML', 'replayHTML', 'compareHTML2', 'birdieHTML',
   'scorecardData', 'scorecardHTML', 'rsTopHTML', 'quickViewHTML', 'takeawayHTML', 'statTilesHTML', 'roundParCurvesHTML', 'rsPuttBrkHTML', 'compareHTML', 'applyHeat', 'legendNotes', 'infoize',
-  'stListScroll', 'prDayAct', 'statsData', 'statsRound', 'mgData', 'trendsData', 'planData', 'finishedRoundsOf', 'courseVsTest', 'bzUpdate', 'byDay', 'prWords', 'prTitle', 'spokeOf', 'dayLabel', 'dayKey', 'pgOf', 'hmS'];
+  'stListScroll', 'prDayAct', 'statsData', 'statsRound', 'mgData', 'trendsData', 'planData', 'finishedRoundsOf', 'courseVsTest', 'bzUpdate', 'byDay', 'prWords', 'prTitle', 'spokeOf', 'dayLabel', 'dayKey', 'pgOf', 'hmS',
+  // v230 Practice tab (coach site): the Practice page's cards one by one, so the web can lay them out on a wide screen
+  'weekCardHTML', 'gapCardHTML', 'practiceCardHTML', 'playingCardHTML', 'recentDaysHTML', 'prLegend', 'planCardHTML', 'dayBarHTML', 'weekAheadHTML'];
 // things that are the phone's business (editing, PDF, backup, sync, sign-in): replaced by the shim's do-nothing versions
 const STUBS = ['render', 'toast', 'pdfHTML', 'grSheetHTML', 'storyHTML', 'storyFullHTML', 'storyClose', 'storyAct', 'makeGameReport', 'mvBarHTML', 'mvSheetHTML', 'addSheetHTML', 'sendSheetHTML',
   'gdCardHTML', 'backupDirty', 'prSheetHTML', 'sessSheetHTML', 'typicalCardHTML', 'playPickHTML', 'notMineHTML', 'syncSnap', 'syncDirty', 'syncNow', 'shareStatus', 'SYNCX', 'syncOn',
