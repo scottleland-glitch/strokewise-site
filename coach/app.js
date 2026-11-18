@@ -221,12 +221,14 @@
     var sg = CH.line({ label: 'Strokes gained per round', zero: true, yFmt: function (v) { return CALC.fmtSG(v); }, series: [
       { pts: S.map(function (p) { return { t: p.t, v: p.sg18, tip: tip(p, CALC.fmtSG(p.sg18)) }; }), dots: true, line: false, color: '#9bb7a5' },
       { pts: S.map(function (p, i) { return { t: p.t, v: D.sgAvg[i] }; }), color: '#0b5d1e' }] });
+    // v240 (Scott): every SG chart has the same line – dots are rounds, the line is the average of the last 3 rounds with shots in that skill
     var minis = CALC.CATS.map(function (c) {
-      var pts = S.map(function (p) { return { t: p.t, v: p.cats[c.k], tip: tip(p, CALC.fmtSG(p.cats[c.k])) }; }), vals = pts.filter(function (p) { return p.v != null; }).slice(-5).map(function (p) { return p.v; });
+      var pts = S.map(function (p) { return { t: p.t, v: p.cats[c.k], tip: tip(p, CALC.fmtSG(p.cats[c.k])) }; }), vals = pts.filter(function (p) { return p.v != null; }).slice(-D.lineN).map(function (p) { return p.v; });
       var avg = vals.length ? vals.reduce(function (t, x) { return t + x; }, 0) / vals.length : null;
-      return '<div class="mini"><b>' + c.name + '</b><span>' + (avg == null ? '–' : sgHTML(avg)) + '</span>' + CH.line({ small: true, w: 300, h: 70, zero: true, label: c.name + ' per round', series: [{ pts: pts, dots: true, color: '#1f6f4a', width: 2 }] }) + '</div>'; }).join('');
-    return '<div class="charts"><div><h3>Score</h3><p class="sub">Lower is better. Dots are rounds (18 holes), the line is the average of the last 5.</p>' + score + '</div><div><h3>Strokes gained</h3><p class="sub">Per 18 holes. Above the dashed line beats the benchmark.</p>' + sg + '</div></div>' +
-      '<h3 style="margin-top:22px">By skill</h3><p class="sub">Strokes gained per 18 holes. The number is the average of the last 5 rounds with shots in that skill.</p><div class="minis">' + minis + '</div>';
+      return '<div class="mini"><b>' + c.name + '</b><span>' + (avg == null ? '–' : sgHTML(avg)) + '</span>' + CH.line({ small: true, w: 300, h: 70, zero: true, label: c.name + ' per round', series: [
+        { pts: pts, dots: true, line: false, color: '#9bb7a5' }, { pts: S.map(function (p, i) { return { t: p.t, v: D.catAvg[c.k][i] }; }), color: '#1f6f4a', width: 2 }] }) + '</div>'; }).join('');
+    return '<div class="charts"><div><h3>Score</h3><p class="sub">Lower is better. Dots are rounds (18 holes), the line is the average of the last 3.</p>' + score + '</div><div><h3>Strokes gained</h3><p class="sub">Per 18 holes. Dots are rounds, the line is the average of the last 3. Above the dashed line beats the benchmark.</p>' + sg + '</div></div>' +
+      '<h3 style="margin-top:22px">By skill</h3><p class="sub">Strokes gained per 18 holes. Dots are rounds; the line and the number are the average of the last 3 rounds with shots in that skill.</p><div class="minis">' + minis + '</div>';
   }
   var TABS = [['overview', 'Overview', ''], ['rounds', 'Rounds', 'rounds'], ['stats', 'Stats', 'stats'], ['mygame', 'My Game', 'mygame'], ['trends', 'Trends', 'trends'], ['practice', 'Practice', 'practice'], ['tests', 'Tests', 'tests']];
   function chrome(uid, tab, s, extra) {

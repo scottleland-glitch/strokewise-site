@@ -80,10 +80,44 @@ out.forEach((a) => {
     t('Strokes lost vs practice time card has no Recent practice in it', !/id="prlist"/.test(H.vs) && /id="prlist"/.test(H.recent));
     const days = AV.data.byDay(logs); t('Recent practice: newest day first, 10 days, then Show earlier days', (H.recent.match(/class="prday( open)?"/g) || []).length === Math.min(10, days.length) && H.recent.indexOf('data-v="' + days[0].k + '"') > 0 && (days.length <= 10 || /prmoredays/.test(H.recent)));
     t('My Practice: three swipe pages (this week, 30 days, 3 months)', (H.spider.match(/class="wkpage prpage"/g) || []).length === 3);
+    // v240 (Scott): the My Practice 30-day number and "Your game and your training" agree – logged practice from the first log on; the typical
+    // week only fills the days before it (and the line says so); week-ahead targets in 1h 55m, bars fill toward the target, no black marks
+    const toMin = (x) => { let m = 0; x.replace(/(\d+)\s*h/, (q, h) => { m += 60 * h; }); x.replace(/(\d+)\s*(m|min)\b/, (q, n) => { m += +n; }); return m; };
+    const p30 = (H.spider.match(/data-p="30d"[\s\S]*?class="prh">([^<]*)</) || [])[1] || '', gapW = (H.gap.match(/<span class="gapb"><span class="gbar"><i class="gp"[^>]*><\/i><\/span><em>([^<]*)<\/em>/g) || []).map((x) => x.replace(/^.*<em>|<\/em>$/g, '')).filter((x) => x !== '–').reduce((s0, x) => s0 + toMin(x), 0);
+    const firstLog = logs.map((e) => Date.parse(e.date)).sort((x, y) => x - y)[0], allLogged = firstLog < Date.now() - 31 * DAY, typ = /Includes your typical week before/.test((H.spider.match(/data-p="30d"[\s\S]*?<\/p>/) || [''])[0]);
+    t('My Practice 30 days ' + (allLogged ? '= Your game and your training (all logged)' : 'says it includes the typical week'), allLogged ? Math.abs(toMin(p30) - gapW) <= 5 && !typ : typ || Math.abs(toMin(p30) - gapW) <= 5, p30 + ' vs ' + gapW + ' min');
+    t('Your game and your training: practice a week over the last 30 days, times like 1h 5m', /practice \(last 30 days\)/.test(H.gap) && !/<em>\d{2,}m<\/em>/.test(H.gap.replace(/<em>[1-5]?\dm<\/em>/g, '')));
+    t('Week ahead: no black target marks, bars fill toward the target', !/wktgt"/.test(H.ahead) && !/class="wktgt"/.test(H.week) && (H.ahead.match(/class="wafill"/g) || []).length >= 5);
+    t('Week ahead targets read "45m of 1h 55m" (no plain 115m)', (H.ahead.match(/class="wav">(✓ )?\d+(h|m)( \d+m)? of \d+(h|m)( \d+m)?</g) || []).length >= 5 && !/class="wav">\d{3,}m/.test(H.ahead) && !/[+−-]\d{2,}m<|\b\d{3,}m\b/.test(H.ahead.replace(/<[^>]+>/g, ' ')));
     t('Playing and practice by week: no Tournament vs practice (that is on Stats)', /id="plcard"/.test(H.playing) && !/Tournament vs practice/i.test(H.playing));
     const acts = Object.values(H).join('').match(/data-act="([^"]+)"/g) || [], EDIT = /"(prdelask|prdelyes|predit|predsave|sessopen|tourdel|toursave|setlog|setrecs)"/;
     t('no edit or delete actions in the Practice cards (coach view)', !acts.some((x) => EDIT.test(x)), acts.filter((x) => EDIT.test(x)).join(' '));
     AV.leave();
   }
+}
+// v240 (Scott): the Score, Strokes gained and By-skill lines are the average of the last 3 rounds (was 5)
+{
+  const a = out[0], A = { uid: a.name, name: a.name, rounds: a.rounds, tests: a.tests, practice: a.practice, profile: a.profile, member: { at: now }, stamp: 1 }, D = CALC.detail(A, L, { now, period: 'all' });
+  const exp = (key) => { const seen = []; return D.series.map((p) => { const v = key(p); if (v == null) return null; seen.push(v); return seen.length >= 3 ? seen.slice(-3).reduce((x, y) => x + y, 0) / 3 : null; }); };
+  const same = (x, y) => x.length === y.length && x.every((v, i) => (v == null && y[i] == null) || Math.abs(v - y[i]) < 1e-9);
+  t('trend lines: score and SG = average of the last 3 rounds', D.lineN === 3 && same(D.scoreAvg, exp((p) => p.strokes)) && same(D.sgAvg, exp((p) => p.sg18)) && D.sgAvg.filter((v) => v != null).length >= 5);
+  t('By-skill lines: average of the last 3 rounds with shots in that skill', CALC.CATS.every((c) => same(D.catAvg[c.k], exp((p) => p.cats[c.k]))));
+  const fs = require('fs'), src = fs.readFileSync(C + 'app.js', 'utf8') + fs.readFileSync(C + 'pages.js', 'utf8'); t('no "last 5" left in the trend chart labels', !/the line is the average of the last 5|average of the last 5 rounds with shots/.test(src) && /average of the last 3/.test(src));
+}
+// v240 (Scott): Trends lines go through every round with rounded corners (no pointy elbows) – never overshoot, every dot on the line
+{
+  require(C + 'charts.js'); const CH = global.COACHCHARTS, day = 864e5;
+  const pts = [3, 1, 4, 4, 5, 2, 6, 6, 6, 1].map((v, i) => ({ t: i * 7 * day, v }));
+  const svg = CH.line({ label: 'x', series: [{ pts, color: '#0b5d1e' }] }), mini = CH.line({ small: true, w: 300, h: 70, zero: true, label: 'm', series: [{ pts, dots: true, color: '#1f6f4a', width: 2 }] });
+  t('Trends charts: lines are smooth curves (no straight polylines)', !/<polyline/.test(svg + mini) && /<path d="M[\d.]+ [\d.]+C/.test(svg) && /<path d="M[\d.]+ [\d.]+C/.test(mini));
+  const P = [[0, 50], [10, 10], [20, 40], [30, 40], [40, 45], [50, 0]], d = CH.monoPath(P), seg = d.split('C').slice(1).map((x) => x.trim().split(' ').map(Number));
+  let over = 0, flat = true; seg.forEach((c, i) => { const y0 = P[i][1], y1 = P[i + 1][1], lo = Math.min(y0, y1) - 1e-9, hi = Math.max(y0, y1) + 1e-9;
+    for (let k = 0; k <= 20; k++) { const u = k / 20, y = (1 - u) ** 3 * y0 + 3 * (1 - u) ** 2 * u * c[1] + 3 * (1 - u) * u * u * c[3] + u ** 3 * y1; if (y < lo || y > hi) over++; if (y0 === y1 && Math.abs(y - y0) > 1e-9) flat = false; } });
+  t('monotone curve: never overshoots between points, flat stays flat', over === 0 && flat && seg.length === P.length - 1, over + ' overshoots');
+  const pts2 = [3, 1, 4, 4.5, 5, 2, 6, 6, 6, 1].map((v, i) => ({ t: i * 7 * day + (i === 3 ? -6.5 * day : 0), v })); // two rounds a day apart
+  const m2 = CH.line({ small: true, w: 300, h: 70, zero: true, label: 'm', series: [{ pts: pts2, dots: true, color: '#1f6f4a', width: 2 }] });
+  const dots = [...m2.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)"/g)].map((q) => q[1] + ' ' + q[2]), ends = (m2.match(/<path d="([^"]+)"/)[1]).split(/[MC]/).filter(Boolean).map((x) => x.trim().split(' ').slice(-2).join(' '));
+  t('every round\'s dot is on the line (rounds a day apart too)', dots.length === 10 && dots.every((q, i) => q === ends[i]), dots.length + ' dots, ' + ends.length + ' line points');
+  const hs = seg.map((c, i) => (c[0] - P[i][0]) / (P[i + 1][0] - P[i][0])); t('corners only: short handles (0.2 of each gap), the line runs nearly straight between rounds', hs.every((x) => Math.abs(x - 0.2) < 0.01) && /stroke-linejoin="round" stroke-linecap="round"/.test(m2), hs.map((x) => x.toFixed(2)).join());
 }
 process.exit(bad ? 1 : 0);

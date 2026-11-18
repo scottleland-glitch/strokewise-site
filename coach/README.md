@@ -30,10 +30,10 @@ Routes (after `#/a/<athlete id>`): *(overview)* · `rounds` · `round/<id>` · `
 
 `#/a/<id>/practice` shows the app's Practice screen card by card, two columns on a computer, one on a phone, then the full session table. The cards are the app's own code, generated: `extract-app.js` now also roots `weekCardHTML`, `gapCardHTML`, `practiceCardHTML`, `playingCardHTML`, `recentDaysHTML`, `planCardHTML`, and `shim.js` exposes them as `APPVIEWS.practice.{week, gap, spider, vs, recent, playing, plan}`, built with the same arguments as the app's `practicePageHTML` (and `myGameHTML` for My Practice).
 
-- **Your week ahead** (`ahead`, full width on top): v232 shows it to a coach, read-only (no ✕, no Start this week).
+- **Your week ahead** (`ahead`, full width on top): v232 shows it to a coach, read-only (no ✕, no Start this week). v240: each target bar is as long as its target and fills with what is done this week ("45m of 1h 55m"); no black marks.
 - **This week slider** (`week`): page 1 each area against its weekly target, page 2 "Each day, by group", page 3 the fading-average chart (v238: each day counts half as much 3 days later, minutes a week; tournament / practice-round days hold it flat; v239: the green shaded blocks are hidden), fitted to the practice logged (up to 3 months, header e.g. "Last 3 weeks · fading average") with 🏆, lessons and the dashed target; Fit (default) / 30d / 60d / 90d chips under its header (`wkspan`, view only). ‹ › in the header change the week.
-- **Your game and your training** (`gap`): strokes lost per round against practice per week, by skill.
-- **My Practice** (`spider`, from My Game): this week, 30 days and 3 months against the benchmark group.
+- **Your game and your training** (`gap`): strokes lost per round against practice per week (v240: last 30 days, the same days as My Practice's 30-day page, so the two agree), by skill.
+- **My Practice** (`spider`, from My Game): this week, 30 days and 3 months against the benchmark group. v240: logged practice from the first log on; the athlete's typical week only fills the days before it, and the line says "Includes your typical week before your first log (date)".
 - **Strokes lost vs practice time** (`vs`): share of strokes lost against share of practice time (uses the page's period buttons).
 - **Recent practice** (`recent`): one row per day; open a day, click a session for `practice/<id>`.
 - **Playing and practice · by week** (`playing`): hours on the course against practice hours.

@@ -5,6 +5,7 @@
 (function (root) {
   'use strict';
   var DAY = 864e5, MEMO = typeof WeakMap !== 'undefined' ? new WeakMap() : null; // per-athlete work kept off the athlete object
+  var LINE_N = 3; // v240 (Scott): trend lines = the average of the last 3 rounds
   var CATS = [
     { k: 'drive', name: 'Driving', sub: 'Tee shots', spokes: ['drive'] },
     { k: 'irons', name: 'Approach', sub: 'From 100+ yd', spokes: ['irons'] },
@@ -155,9 +156,10 @@
     var asc = P.rows.slice().reverse();
     var series = asc.map(function (r, i) { return { t: r.t, id: r.id, course: r.course, strokes: r.full ? r.strokes : null, toPar: r.toPar, sg18: r.sg18, holes: r.holes,
       cats: CATS.reduce(function (o2, C) { o2[C.k] = r.cats[C.k].n ? r.cats[C.k].sg * 18 / r.holes : null; return o2; }, {}) }; });
-    function roll(key, n) { return series.map(function (p, i) { var w = series.slice(Math.max(0, i - n + 1), i + 1).map(function (q) { return key(q); }).filter(function (v) { return v != null; }); return w.length >= Math.min(3, n) ? mean(w) : null; }); }
+    // v240 (Scott): the trend lines are the average of the last 3 rounds that have a number (was 5); a point on every such round
+    function roll(key, n) { var seen = []; return series.map(function (p) { var v = key(p); if (v == null) return null; seen.push(v); return seen.length >= n ? mean(seen.slice(-n)) : null; }); }
     return { summary: s, tiles: sh.tiles, rounds: sh.rounds, cats: cats, usual: sh.prev ? (sh.prev.usual ? 'your usual (' + sh.prev.rounds + ' rounds before)' : 'the year before') : '', allRounds: P.rows,
-      tests: tests, prac: prac, vs: vs, series: series, scoreAvg: roll(function (q) { return q.strokes; }, 5), sgAvg: roll(function (q) { return q.sg18; }, 5), radar: sh };
+      tests: tests, prac: prac, vs: vs, series: series, scoreAvg: roll(function (q) { return q.strokes; }, LINE_N), sgAvg: roll(function (q) { return q.sg18; }, LINE_N), catAvg: CATS.reduce(function (o2, C) { o2[C.k] = roll(function (q) { return q.cats[C.k]; }, LINE_N); return o2; }, {}), lineN: LINE_N, radar: sh };
   }
 
 
