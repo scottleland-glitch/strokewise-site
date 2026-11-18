@@ -2983,13 +2983,13 @@
 .appui .trprog i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4f9d6d, #1f6f4a); }
 .appui .trchart .trslip.exp { fill: rgba(222, 160, 40, .16); } .appui .trchart .trdip { fill: rgba(222, 160, 40, .14); }
 .appui .trchart .trtag.exp { fill: #a06a12; }
-.appui .trchart .trles { stroke: #6b5aa6; stroke-width: 1; stroke-dasharray: 2 3; } .appui .trchart .trles.big { stroke-width: 1.6; stroke-dasharray: none; }
-.appui .trchart .trlestx { font-size: 8.5px; font-weight: 700; fill: #5a4a96; }
+.appui .trchart .trles { stroke: #0f7a83; stroke-width: 1; stroke-dasharray: 2 3; } .appui .trchart .trles.big { stroke-width: 1.6; stroke-dasharray: none; }
+.appui .trchart .trlestx { font-size: 8.5px; font-weight: 700; fill: #0b5f66; }
 /* v196: Trends – the band is confidence (red → amber → green); no colour for better / worse */
 .appui .trchart .trband.low { fill: rgba(208, 96, 79, .22); } .appui .trchart .trband.mid { fill: rgba(222, 160, 40, .24); } .appui .trchart .trband.high { fill: rgba(63, 150, 96, .24); }
 .appui .trchart .trwhat { fill: none; stroke: #6f7d88; stroke-width: 1.3; stroke-dasharray: 3 3; } .appui .trchart .trwhat.thin { stroke-width: 1.1; }
 .appui .trchart .trtag.what { fill: #4d5b66; }
-.appui .trchart .trdip { fill: rgba(107, 90, 166, .10); } .appui .trchart .trtag.exp { fill: #5a4a96; }
+.appui .trchart .trdip { fill: rgba(15, 122, 131, .10); } .appui .trchart .trtag.exp { fill: #0b5f66; }
 .appui .trconf { margin: -2px 4px 2px; font-size: 12px; font-weight: 700; } .appui .trconf.low { color: #b0473f; } .appui .trconf.mid { color: #a06a12; } .appui .trconf.high { color: #2f7a4c; }
 .appui .trlede b.cl { color: #b0473f; } .appui .trlede b.cm { color: #a06a12; } .appui .trlede b.ch { color: #2f7a4c; }
 /* v197: tap a week's dot */
@@ -3059,7 +3059,7 @@
 .appui .planmsg { margin: 0 0 10px; padding: 9px 12px; border-radius: 12px; background: rgba(31, 111, 74, .1); font-size: 13.5px; line-height: 1.35; color: #17301f; } .appui .planmsg.sharp { background: rgba(222, 160, 40, .16); }
 .appui .planlist { list-style: none; margin: 0; padding: 0; } .appui .planitem { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 1px solid rgba(23, 48, 31, .09); }
 .appui .planitem:first-child { border-top: 0; } .appui .planitem .pin { flex: 0 0 24px; height: 24px; border-radius: 50%; background: #1f6f4a; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
-.appui .planitem.maint .pin { background: #8a9aa6; } .appui .planitem.coach .pin { background: #6b5aa6; }
+.appui .planitem.maint .pin { background: #8a9aa6; } .appui .planitem.coach .pin { background: #0f7a83; } /* v234: teal, not purple */
 .appui .pltext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; } .appui .pltext small { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #5b6b78; }
 .appui .pltext b { font-size: 15.5px; line-height: 1.25; } .appui .plwhy { font-size: 13px; line-height: 1.35; color: #43525f; } .appui .pltip { font-size: 12.5px; color: #a06a12; font-weight: 600; }
 .appui .plright { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; } .appui .plmin { font-size: 13px; font-weight: 700; white-space: nowrap; }
@@ -3275,3 +3275,7 @@
 .appui .wacard h2, .appui .gapcard h2 { font-weight: 800; }
 .appui .statspage .plcmp, .appui .statspage .plcmp * { font-weight: 400 !important; } .appui .statspage .plcmp h2 { font-weight: 500 !important; }
 .appui .statspage .plcmp h2 { font-size: 16px !important; line-height: 1.3; } .appui .statspage .plcmp p, .appui .statspage .plcmp td, .appui .statspage .plcmp th { font-size: 14px; }
+/* v233 (Scott): plan notes – the recency line (green ↗ turning around, red ↘ new) and a muted source line */
+.appui .plrec { display: flex; align-items: baseline; gap: 5px; font-size: 12.5px; line-height: 1.3; font-weight: 600; margin-top: 3px; }
+.appui .plrec i { font-style: normal; font-weight: 800; font-size: 15px; line-height: 1; } .appui .plrec.better { color: #138a4a; } .appui .plrec.worse { color: #c8322b; }
+.appui .plsrc { display: block; font-size: 11.5px; line-height: 1.3; color: #7d8a95; margin-top: 3px; }

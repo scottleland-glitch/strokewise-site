@@ -39,7 +39,7 @@ out.forEach((a) => {
   t('Long + fairway is ignored (400 − 30 = 370, no Long stored)', fw.hit === 370 && fw.dir === '', fw.hit + ' ' + JSON.stringify(fw.dir));
   t('Long + rough far from the green is not added (458 − 284 = 174)', SG.analyzeHole({ par: 5, finished: true, rows: [R(458, 'tee'), R(284, 'rough', 'long'), R(20, 'green'), R(2, 'holed')] }, 'pga').shots[0].hit === 174);
   t('450 yd / 40 yd guard still drops 320 + 50 past the hole', drive([R(320, 'tee'), R(50, 'rough', 'long'), R(8, 'green'), R(2, 'holed')]).hit === null);
-  t('coach sg.js is the app\'s v232 engine', SG.VERSION === 'v232' && SG.LONG_PAST_MAX_YD === 60);
+  t('coach sg.js is the app\'s v235 engine', SG.VERSION === 'v235' && SG.LONG_PAST_MAX_YD === 60);
 }
 // the app's Practice screen cards (lib/appviews.js, generated) – built in node with a do-nothing document, read-only
 {
