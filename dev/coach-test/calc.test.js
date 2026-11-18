@@ -55,10 +55,24 @@ out.forEach((a) => {
     const logs = MYGAME.validPractice(a.practice), DAY = 864e5, mon = new Date(); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
     const wkMin = logs.filter((e) => Date.parse(e.date) >= mon.getTime() && e.min > 0).reduce((s, e) => s + e.min, 0), hmS = AV.data.hmS;
     t('This week total = the practice logged since Monday', new RegExp('id="wktot">' + hmS(wkMin).replace(/ /g, ' ') + ' of ').test(H.week), hmS(wkMin) + ' | ' + (H.week.match(/id="wktot">[^<]*/) || [''])[0]);
-    t('week slider has 3 pages: by area, each day, rolling 7 days (fitted span)', (H.week.match(/class="wkpage"/g) || []).length === 3 && /Each day, by group/.test(H.week) && /Last \d+ (days|weeks) · rolling 7 days|Last 3 months · rolling 7 days/.test(H.week));
+    t('week slider has 3 pages: by area, each day, fading average (fitted span)', (H.week.match(/class="wkpage"/g) || []).length === 3 && /Each day, by group/.test(H.week) && /Last \d+ (days|weeks|months) · fading average/.test(H.week));
     const iso = (t0) => { const d = new Date(t0); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }, today = iso(Date.now());
-    const last7 = logs.filter((e) => { const d = iso(Date.parse(e.date)); return d <= today && d > iso(Date.now() - 7 * DAY) && e.min > 0; }).reduce((s, e) => s + e.min, 0);
-    const dl = +((H.week.match(/data-last="(\d+)"/) || [])[1]); t('rolling 7-day chart ends on the last 7 days of practice', dl === last7, dl + ' vs ' + last7);
+    // v238: fading average (half-life 3 days, minutes a week, averaged over the days logged – at least 3); tournament / practice-round days
+    // (and one day between two of them) hold it flat – recomputed here from the logs and rounds to check the chart's data-last
+    const addD = (s0, n) => { const d = new Date(Date.parse(s0 + 'T12:00:00')); d.setDate(d.getDate() + n); return iso(d.getTime()); };
+    const first = logs.filter((e) => e.min > 0).map((e) => iso(Date.parse(e.date))).filter((d) => d <= today).sort()[0];
+    const golf = {}; A.rounds.filter((r) => { const S0 = SG.summarize(r); return r.holes.length > 0 && S0.holesDone === r.holes.length; }).forEach((r) => { if (MYGAME.playOf(r)) golf[iso(Date.parse(r.date))] = 1; });
+    const sv = H.week.match(/data-from="([\d-]+)"/), from0 = sv ? sv[1] : today; let from = from0; if (first) { const f0 = first > addD(from0, -30) ? first : addD(from0, -30); if (f0 < from) from = f0; }
+    const ds = []; for (let d = from; d <= today; d = addD(d, 1)) ds.push(d);
+    const held = {}; ds.forEach((d, i) => { if (golf[d] || (i && i < ds.length - 1 && golf[ds[i - 1]] && golf[ds[i + 1]])) held[d] = 1; });
+    const perDay = {}; logs.forEach((e) => { if (e.min > 0) { const d = iso(Date.parse(e.date)); perDay[d] = (perDay[d] || 0) + e.min; } });
+    const AF = Math.pow(0.5, 1 / 3); let ew = 0, kd = first && first < from ? 99 : 0;
+    ds.forEach((d) => { if (first && d >= first && !(held[d] && kd)) { ew = ew * AF + (perDay[d] || 0) * (1 - AF); kd++; } });
+    const fadeNow = kd ? ew / (1 - Math.pow(AF, Math.max(kd, 3))) * 7 : 0;
+    const dl = +((H.week.match(/data-last="(\d+)"/) || [])[1]); t('fading-average chart ends on today\'s fading average (rounds held)', Math.abs(dl - fadeNow) <= 2, dl + ' vs ' + Math.round(fadeNow));
+    const tots = ((H.week.match(/data-tots="([\d,]+)"/) || [])[1] || '').split(',').map(Number);
+    t('chart data-tots ends on data-last', tots.length > 0 && tots[tots.length - 1] === dl);
+    t('round days are not shaded (wkhold hidden)', !/class="wkhold"/.test(H.week));
     t('rolling chart groups: Putting, Short game, Wedges, Irons, Woods', /Putting[\s\S]*Short game[\s\S]*Wedges[\s\S]*Irons[\s\S]*Woods/.test(H.week.replace(/<[^>]+>/g, ' ')));
     t('game vs training: one row per skill (7)', (H.gap.match(/class="gaprow"/g) || []).length === 7);
     const sh = (H.vs.match(/<em>(\d+)%<\/em>/g) || []).map((x) => +x.replace(/\D/g, '')); const lost = sh.filter((x, i) => i % 2 === 0), time = sh.filter((x, i) => i % 2 === 1), sum = (L) => L.reduce((s0, x) => s0 + x, 0);

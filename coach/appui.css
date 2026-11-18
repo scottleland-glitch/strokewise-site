@@ -3283,3 +3283,4 @@
 /* v237: Fit / 30d / 60d / 90d on the rolling 7-day chart */
 .appui .wkspans { gap: 5px; margin: 2px 0 0; } .appui .wkspans .prchip { min-height: 28px; padding: 0 11px; font-size: 12.5px; font-weight: 600; color: #17301f; } .appui .wkspans .prchip.on { background: #1f6f4a; border-color: #1f6f4a; color: #fff; }
 .appui .weekcard.isfull .wkspans .prchip { min-height: 34px; font-size: 14px; padding: 0 14px; }
+
