@@ -55,7 +55,7 @@ out.forEach((a) => {
     const logs = MYGAME.validPractice(a.practice), DAY = 864e5, mon = new Date(); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
     const wkMin = logs.filter((e) => Date.parse(e.date) >= mon.getTime() && e.min > 0).reduce((s, e) => s + e.min, 0), hmS = AV.data.hmS;
     t('This week total = the practice logged since Monday', new RegExp('id="wktot">' + hmS(wkMin).replace(/ /g, ' ') + ' of ').test(H.week), hmS(wkMin) + ' | ' + (H.week.match(/id="wktot">[^<]*/) || [''])[0]);
-    t('week slider has 3 pages: by area, each day, last 3 months', (H.week.match(/class="wkpage"/g) || []).length === 3 && /Each day, by group/.test(H.week) && /Last 3 months · rolling 7 days/.test(H.week));
+    t('week slider has 3 pages: by area, each day, rolling 7 days (fitted span)', (H.week.match(/class="wkpage"/g) || []).length === 3 && /Each day, by group/.test(H.week) && /Last \d+ (days|weeks) · rolling 7 days|Last 3 months · rolling 7 days/.test(H.week));
     const iso = (t0) => { const d = new Date(t0); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }, today = iso(Date.now());
     const last7 = logs.filter((e) => { const d = iso(Date.parse(e.date)); return d <= today && d > iso(Date.now() - 7 * DAY) && e.min > 0; }).reduce((s, e) => s + e.min, 0);
     const dl = +((H.week.match(/data-last="(\d+)"/) || [])[1]); t('rolling 7-day chart ends on the last 7 days of practice', dl === last7, dl + ' vs ' + last7);

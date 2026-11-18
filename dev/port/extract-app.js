@@ -51,7 +51,7 @@ if (!handler) throw new Error('click handler not found – line moved?');
 let sw = null; walk.simple(handler.expression.arguments[1].body, { SwitchStatement(n) { if (!sw || n.cases.length > sw.cases.length) sw = n; } });
 const VIEW_ONLY = ['info', 'mgperiod', 'mgknow', 'trzoom', 'trwk', 'strange', 'stpick', 'stpickev', 'stpickclr', 'stround', 'stcmp', 'stcat', 'stpmb', 'stcur', 'stpt', 'blminest', 'blminehist', 'tkknow', 'stx',
   'map', 'mapscope', 'mapclose', 'pinseg', 'proxb', 'proxlie', 'clubsel', 'heat', 'pmg', 'puttn', 'cmpn', 'cmpkind', 'cmpgrp', 'cmpside', 'bzscope', 'replay', 'rpgreen', 'rpgreenback', 'rphole', 'rpclose',
-  'wkoff', 'wkfull', 'wkclose', 'prfull', 'prclose', 'plweek', 'plbench', 'sgtoggle', 'prplan'];
+  'wkoff', 'wkspan', 'wkfull', 'wkclose', 'prfull', 'prclose', 'plweek', 'plbench', 'sgtoggle', 'prplan'];
 const cases = []; let pend = [];
 sw.cases.forEach((c) => { pend.push(c); if (c.consequent.length) { if (pend.some((x) => x.test && VIEW_ONLY.includes(x.test.value))) cases.push(src.slice(pend[0].start, c.end)); pend = []; } });
 const acts = []; sw.cases.forEach((c) => { if (c.test && VIEW_ONLY.includes(c.test.value)) acts.push(c.test.value); });

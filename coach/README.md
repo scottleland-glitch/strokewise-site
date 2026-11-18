@@ -31,7 +31,7 @@ Routes (after `#/a/<athlete id>`): *(overview)* · `rounds` · `round/<id>` · `
 `#/a/<id>/practice` shows the app's Practice screen card by card, two columns on a computer, one on a phone, then the full session table. The cards are the app's own code, generated: `extract-app.js` now also roots `weekCardHTML`, `gapCardHTML`, `practiceCardHTML`, `playingCardHTML`, `recentDaysHTML`, `planCardHTML`, and `shim.js` exposes them as `APPVIEWS.practice.{week, gap, spider, vs, recent, playing, plan}`, built with the same arguments as the app's `practicePageHTML` (and `myGameHTML` for My Practice).
 
 - **Your week ahead** (`ahead`, full width on top): v232 shows it to a coach, read-only (no ✕, no Start this week).
-- **This week slider** (`week`): page 1 each area against its weekly target, page 2 "Each day, by group", page 3 "Last 3 months · rolling 7 days" with 🏆, lessons and the dashed target. ‹ › in the header change the week.
+- **This week slider** (`week`): page 1 each area against its weekly target, page 2 "Each day, by group", page 3 the rolling 7-day chart, fitted to the practice logged (up to 3 months, header e.g. "Last 3 weeks · rolling 7 days") with 🏆, lessons and the dashed target; Fit (default) / 30d / 60d / 90d chips under its header (`wkspan`, view only). ‹ › in the header change the week.
 - **Your game and your training** (`gap`): strokes lost per round against practice per week, by skill.
 - **My Practice** (`spider`, from My Game): this week, 30 days and 3 months against the benchmark group.
 - **Strokes lost vs practice time** (`vs`): share of strokes lost against share of practice time (uses the page's period buttons).
