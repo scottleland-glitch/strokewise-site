@@ -114,12 +114,14 @@
       if (left > 0) F.push({ tone: 'amber', kind: 'lesson', text: 'Lesson homework: ' + (left >= 7 ? Math.round(left / 7) + ' wk' + (Math.round(left / 7) === 1 ? '' : 's') : left + ' day' + (left === 1 ? '' : 's')) + ' left', to: 'practice/' + les.id }); }
     var seen = seenOf({ seen: seenIn && seenIn.ids ? seenIn : null, seenAt: typeof seenIn === 'number' ? seenIn : 0 }), fresh = freshOf(A, seen), parts = [];
     var KIND = [['rounds', 'round', 'round'], ['tests', 'test', 'test'], ['practice', 'practice log', 'practice']];
-    KIND.forEach(function (k) { var L2 = fresh[k[0]]; if (!L2.length) return; parts.push({ kind: k[0], n: L2.length, text: plural(L2.length, k[1]), to: L2.length === 1 ? k[2] + '/' + L2[0].id : (k[0] === 'rounds' ? 'rounds' : k[0] === 'tests' ? 'tests' : 'practice') + '?new=1' }); });
-    if (parts.length && (seen.base || seen.ids && Object.keys(seen.ids).length)) F.push({ tone: 'blue', kind: 'new', text: 'New: ' + parts.map(function (p) { return p.text; }).join(', '), parts: parts, to: parts[0].to });
+    KIND.forEach(function (k) { var L2 = fresh[k[0]]; if (!L2.length) return; parts.push({ kind: k[0], n: L2.length, text: k[0] === 'practice' ? 'practice' : plural(L2.length, k[1]), /* Scott: "New practice", not "8 practice logs" */ to: L2.length === 1 ? k[2] + '/' + L2[0].id : (k[0] === 'rounds' ? 'rounds' : k[0] === 'tests' ? 'tests' : 'practice') + '?new=1' }); });
+    if (parts.length && (seen.base || seen.ids && Object.keys(seen.ids).length)) F.push({ tone: 'blue', kind: 'new', text: newLead(parts) + parts.map(function (p) { return p.text; }).join(', '), parts: parts, to: parts[0].to });
     var order = { red: 0, amber: 1, blue: 2 }; F.sort(function (a, b) { return order[a.tone] - order[b.tone]; });
     return F;
   }
 
+  // "New practice" when it's only practice; "New: 1 round, practice" otherwise
+  function newLead(parts) { return parts.length === 1 && parts[0].kind === 'practice' ? 'New ' : 'New: '; }
   // one row of the athlete list
   function summary(A, L, o) {
     o = o || {}; var now = o.now == null ? Date.now() : +o.now, period = o.period || '3m', X = lib(L);

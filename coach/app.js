@@ -38,15 +38,17 @@
   }
   function H(uid, rest) { return '#/a/' + encodeURIComponent(uid) + (rest ? '/' + rest : ''); }
   function hm(min) { min = Math.round(min || 0); var h = Math.floor(min / 60), m = min % 60; return h ? h + 'h' + (m ? ' ' + m + 'm' : '') : m + 'm'; }
+  // Scott: "New practice" when it's only practice (no count), "New: 1 round, practice" otherwise
+  function newLead(f) { return f.parts.length === 1 && f.parts[0].kind === 'practice' ? 'New ' : 'New: '; }
   // one tag: red / amber / blue / green. Every tag is a link to the thing it is about. A "New" tag links each part (1 test, 2 practice logs) on its own.
   function tagHTML(f, uid) {
-    if (f.parts) return '<span class="tagp blue">New: ' + f.parts.map(function (p) { return '<a href="' + H(uid, p.to) + '">' + E(p.text) + '</a>'; }).join(', ') + '</span>';
+    if (f.parts) return '<span class="tagp blue">' + newLead(f) + f.parts.map(function (p) { return '<a href="' + H(uid, p.to) + '">' + E(p.text) + '</a>'; }).join(', ') + '</span>';
     return '<a class="tagp ' + f.tone + '" href="' + H(uid, f.to || '') + '">' + E(f.text) + '</a>'; }
   function tagsHTML(s, max) { var F = s.flags.slice().sort(function (a, b) { return (b.kind === 'new') - (a.kind === 'new'); }); if (!F.length) return '<a class="tagp green" href="' + H(s.uid) + '">Holding steady</a>';
     var out = F.slice(0, max || 3).map(function (f) { return tagHTML(f, s.uid); }); if (F.length > (max || 3)) out.push('<a class="tagp more" href="' + H(s.uid) + '">+' + (F.length - (max || 3)) + ' more</a>'); return out.join(''); }
   function flagsHTML(flags, uid) {
     return '<div class="flags">' + flags.map(function (f) { var ic = '<i>' + (f.tone === 'red' ? '!' : f.tone === 'amber' ? '•' : '+') + '</i>';
-      if (f.parts) return '<div class="flagrow ' + f.tone + '">' + ic + 'New: ' + f.parts.map(function (p) { return '<a href="' + H(uid, p.to) + '">' + E(p.text) + '</a>'; }).join(', ') + '<span class="sp"></span><button class="linkbtn" data-act="markall" data-uid="' + E(uid) + '">Mark all as seen</button></div>';
+      if (f.parts) return '<div class="flagrow ' + f.tone + '">' + ic + newLead(f) + f.parts.map(function (p) { return '<a href="' + H(uid, p.to) + '">' + E(p.text) + '</a>'; }).join(', ') + '<span class="sp"></span><button class="linkbtn" data-act="markall" data-uid="' + E(uid) + '">Mark all as seen</button></div>';
       return '<a class="flagrow ' + f.tone + '" href="' + H(uid, f.to || '') + '">' + ic + E(f.text) + '<span class="go">View ›</span></a>'; }).join('') + '</div>'; }
   function avColor(name) { var hs = 0, id = String(name).toLowerCase(); for (var q = 0; q < id.length; q++) hs = (hs * 7 + id.charCodeAt(q)) % 6007; return ['#7a5ab0', '#3f7fbf', '#d39b2a', '#3f9a63', '#b0505a', '#2f8f8f', '#c0662b'][hs % 7]; }
   function periodName(id) { return CALC.PERIODS.filter(function (p) { return p.id === id; })[0].name; }

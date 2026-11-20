@@ -73,8 +73,8 @@ const checks = []; const ok = (name, cond, extra) => { checks.push([name, !!cond
   await p.waitForTimeout(1200);
   await SEED.pushNew('http://127.0.0.1:' + FAKE, J, { tests: 1, practice: 2 }, Date.now()); await SEED.pushNew('http://127.0.0.1:' + FAKE, CH, { rounds: 1 }, Date.now()); await SEED.pushNew('http://127.0.0.1:' + FAKE, MA, { practice: 1 }, Date.now());
   await p.click('[data-act=refresh]'); const jc = '.acard[data-uid="' + J.uid + '"]';
-  await p.waitForFunction((s) => { const c = document.querySelector(s); return c && /New: 1 test, 2 practice logs/.test(c.textContent); }, jc, { timeout: 8000 }).catch(async () => { console.log('DEBUG card:', (await p.textContent(jc)).replace(/\s+/g, ' ')); });
-  ok('list shows "New: 1 test, 2 practice logs" on the athlete’s card', /New: 1 test, 2 practice logs/.test(await p.textContent(jc)), (await p.textContent(jc + ' .tagp.blue')));
+  await p.waitForFunction((s) => { const c = document.querySelector(s); return c && /New: 1 test, practice/.test(c.textContent); }, jc, { timeout: 8000 }).catch(async () => { console.log('DEBUG card:', (await p.textContent(jc)).replace(/\s+/g, ' ')); });
+  ok('list shows "New: 1 test, practice" on the athlete’s card', /New: 1 test, practice/.test(await p.textContent(jc)), (await p.textContent(jc + ' .tagp.blue')));
   ok('another athlete shows "New: 1 round"', /New: 1 round/.test(await p.textContent('.acard[data-uid="' + CH.uid + '"]')));
   ok('latest-activity line names the newest item', /Short game test|Practice/.test(await p.textContent(jc + ' .awhen')), await p.textContent(jc + ' .awhen'));
   await p.screenshot({ path: OUT + '/03-athlete-list-alerts-1440x900.png' });
@@ -87,10 +87,10 @@ const checks = []; const ok = (name, cond, extra) => { checks.push([name, !!cond
   ok('test page: no resume / delete / edit controls', (await p.$$('.appui [data-act=sgtresume]:visible, .appui [data-act=sgtdel]:visible')).length === 0);
   await p.click('.pager a:has-text("Earlier")'); await p.waitForTimeout(300); ok('test prev/next works', /\/test\/t1_3/.test(await hashOf())); await p.goBack(); await p.waitForTimeout(300); ok('browser back returns to the test', /\/test\/tn1_0/.test(await hashOf()));
   await p.click('a:text-is("‹ All athletes")'); await p.waitForSelector('.acard'); await p.waitForTimeout(300);
-  ok('opened test is no longer "New" on the list (per item)', !/1 test/.test(await p.textContent(jc + ' .tagp.blue')) && /2 practice logs/.test(await p.textContent(jc + ' .tagp.blue')), await p.textContent(jc + ' .tagp.blue'));
+  ok('opened test is no longer "New" on the list (per item)', !/1 test/.test(await p.textContent(jc + ' .tagp.blue')) && /^New practice$/.test((await p.textContent(jc + ' .tagp.blue')).trim()), await p.textContent(jc + ' .tagp.blue')); // only practice left → "New practice"
   // tag pill deep link → practice list filtered to the new ones
-  await p.click(jc + ' .tagp.blue a:text-is("2 practice logs")'); await p.waitForSelector('.rt.prac'); await p.waitForTimeout(300);
-  ok('"New: 2 practice logs" opens the practice list with just the new ones', /practice\?new=1/.test(await hashOf()) && (await p.$$('.rt.prac tr.clk')).length === 2 && (await p.$$('.rt.prac .tag.new')).length === 2);
+  await p.click(jc + ' .tagp.blue a:text-is("practice")'); await p.waitForSelector('.rt.prac'); await p.waitForTimeout(300);
+  ok('"New practice" opens the practice list with just the new ones', /practice\?new=1/.test(await hashOf()) && (await p.$$('.rt.prac tr.clk')).length === 2 && (await p.$$('.rt.prac .tag.new')).length === 2);
   await p.screenshot({ path: OUT + '/06-practice-list-1440x900.png' });
   await p.click('.rt.prac tr.clk a >> nth=0'); await p.waitForSelector('.kv, .tilesm'); await p.waitForTimeout(300);
   ok('practice detail opens', /\/practice\/pn1_/.test(await hashOf()) && /Green-side chipping/.test(await body()));
