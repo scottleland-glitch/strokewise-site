@@ -127,6 +127,14 @@ function testShot(r, st, sp, q) {
   return { ft: Math.round(clamp(st.dist * .45 * q.chip * ln(.55) + 3, 2, 45) * 10) / 10 }; // chips: leave in ft
 }
 
+// v246: launch-monitor sessions for the first two athletes – 24 shots at 150 (short and right for Jake), 12 at 120
+function simFor(a, now) {
+  const idx = TEAM.findIndex((t) => t.name === a.name); if (idx > 1) return [];
+  const r = rng(7100 + idx), g = () => { let u = 0; for (let k = 0; k < 6; k++) u += r(); return (u - 3) / 0.7071; }, shots = [];
+  for (let i = 0; i < 24; i++) shots.push({ club: '8i', target: 150, carry: Math.round((150 - (idx ? 1 : 5) + g() * 5) * 10) / 10, total: null, offline: Math.round(((idx ? -1 : 3) + g() * 6) * 10) / 10 });
+  for (let i = 0; i < 12; i++) shots.push({ club: 'PW', target: 120, carry: Math.round((119 + g() * 3) * 10) / 10, total: null, offline: Math.round(g() * 4 * 10) / 10 });
+  return [{ id: 'sim' + idx, date: new Date(now - 3 * DAY).toISOString(), source: 'csv', name: 'GCQuad session', shots }];
+}
 function build(now) { return TEAM.map((s, i) => Object.assign({ spec: s }, buildAthlete(s, i, now))); }
 
 // write it through the stand-in server the way the app does
@@ -143,7 +151,8 @@ async function load(base, now) {
     const aj = await post('signUp', { returnSecureToken: true }), tok = aj.idToken, uid = aj.localId, joined = a.spec.joinedDaysAgo ? now - a.spec.joinedDaysAgo * DAY : now - 150 * DAY;
     await put('PUT', 'teams/' + teamId + '/members/' + uid, tok, { name: a.name, at: joined, parentOk: false });
     const up = { team: teamId, name: a.name, joined, stamp: now - 3600e3, profile: { j: JSON.stringify(a.profile) } };
-    ['rounds', 'tests', 'practice'].forEach((k) => a[k].forEach((it) => { it.player = a.name; up[k + '/' + it.id] = { j: JSON.stringify(it), u: Date.parse(it.updated || it.date) || now }; }));
+    a.sim = simFor(a, now); // v246 sim dispersion sessions (their own random stream, so nothing else changes)
+    ['rounds', 'tests', 'practice', 'sim'].forEach((k) => (a[k] || []).forEach((it) => { it.player = a.name; up[k + '/' + it.id] = { j: JSON.stringify(it), u: Date.parse(it.updated || it.date) || now }; }));
     // PATCH keys with slashes set nested paths
     await put('PATCH', 'data/' + uid, tok, up); a.uid = uid; a.tok = tok;
   }

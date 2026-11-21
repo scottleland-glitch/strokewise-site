@@ -232,7 +232,7 @@
     return '<div class="charts"><div><h3>Score</h3><p class="sub">Lower is better. Dots are rounds (18 holes), the line is the average of the last 3.</p>' + score + '</div><div><h3>Strokes gained</h3><p class="sub">Per 18 holes. Dots are rounds, the line is the average of the last 3. Above the dashed line beats the benchmark.</p>' + sg + '</div></div>' +
       '<h3 style="margin-top:22px">By skill</h3><p class="sub">Strokes gained per 18 holes. Dots are rounds; the line and the number are the average of the last 3 rounds with shots in that skill.</p><div class="minis">' + minis + '</div>';
   }
-  var TABS = [['overview', 'Overview', ''], ['rounds', 'Rounds', 'rounds'], ['stats', 'Stats', 'stats'], ['mygame', 'My Game', 'mygame'], ['trends', 'Trends', 'trends'], ['practice', 'Practice', 'practice'], ['tests', 'Tests', 'tests']];
+  var TABS = [['overview', 'Overview', ''], ['rounds', 'Rounds', 'rounds'], ['stats', 'Stats', 'stats'], ['mygame', 'My Game', 'mygame'], ['trends', 'Trends', 'trends'], ['practice', 'Practice', 'practice'], ['tests', 'Tests', 'tests'], ['dispersion', 'Dispersion', 'dispersion']];
   function chrome(uid, tab, s, extra) {
     var A = ST.athletes[uid], order = sorted(sums()).map(function (x) { return x.uid; }), i = order.indexOf(uid), prev = order[i - 1], next = order[i + 1], to = (TABS.filter(function (t) { return t[0] === tab; })[0] || [0, 0, ''])[2];
     return '<div class="crumb"><a href="#/">‹ All athletes</a><span class="sp"></span>' +
@@ -246,7 +246,7 @@
     if (!pages) pages = window.COACHPAGES({ ST: ST, CALC: CALC, CH: CH, E: E, LIBS: LIBS, fd: fd, par: par, sgHTML: sgHTML, hm: hm, seenFor: seenFor, markItem: markItem, detail: function (u) { return CALC.detail(ST.athletes[u], LIBS, { period: 'all', seen: seenFor(u) }); }, trendsHTML: trendsHTML });
     try { R = pages.render(uid, parts, query); } catch (e) { if (window.console) console.error(e); $app.innerHTML = '<div class="wrap dash"><p class="msg err">Couldn’t show this page.</p><p><a href="' + H(uid) + '">Back to ' + E(A.name) + '</a></p></div>'; return; }
     if (!R) { location.hash = H(uid); return; }
-    var title = { rounds: 'Rounds', stats: 'Stats', mygame: 'My Game', trends: 'Trends', practice: 'Practice', tests: 'Tests', overview: 'Overview' }[R.tab] || '';
+    var title = { rounds: 'Rounds', stats: 'Stats', mygame: 'My Game', trends: 'Trends', practice: 'Practice', tests: 'Tests', dispersion: 'Dispersion', overview: 'Overview' }[R.tab] || '';
     document.title = A.name + ' · ' + title + ' – ' + (ST.team.name || 'Coach dashboard') + ' – Strokewise';
     var y = ST.keepY; ST.keepY = null;
     $app.innerHTML = '<div class="wrap dash">' + chrome(uid, R.tab, s) + '<div class="apage" data-uid="' + E(uid) + '">' + R.html + '</div></div>' + pages.overlay(uid) + footer();
@@ -304,6 +304,7 @@
     if (act === 'sgthub') { location.hash = H(uid, 'tests'); return; }
     if (act === 'sgtrow') { pages.withAV(uid, function () { window.APPVIEWS.sgt.act(act, v, el); }); return; }
     if (!pages.ALLOWED[act]) return;
+    if (/^dsp/.test(act)) { pages.dspAct(uid, act, v, el); return; } // v246 dispersion: its own read-only screens
     if (act === 'wkday') { var dk = pages.openDay(uid, v); if (dk) { rerender(); var dh = document.querySelector('.appui .prdayh[data-v="' + dk + '"]'); if (dh) { dh.scrollIntoView({ block: 'center', behavior: 'smooth' }); dh.focus({ preventScroll: true }); } } return; } // a day on "Each day, by group" opens in Recent practice
     if (act === 'plbench') { var AVp = window.APPVIEWS; AVp.pref('golfsg.plbench.v1', AVp.pref('golfsg.plbench.v1') === '1' ? '0' : '1'); rerender(); return; } // in memory only
     if (act === 'mgperiod') { ST.mgPeriod = v; lsSet(LS.mgPeriod, v); if (CALC.PERIODS.some(function (p) { return p.id === v; })) { ST.period = v; lsSet(LS.period, v); } }

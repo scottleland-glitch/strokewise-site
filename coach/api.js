@@ -1,7 +1,7 @@
 /* StrokeWise coach site – Firebase over plain REST (no SDK), the same calls the app's sync.js makes for a coach.
  *   Authentication: accounts:signInWithPassword, accounts:sendOobCode (password reset), securetoken refresh.
  *   Realtime Database (read only here): /coaches/<uid> · /teams/<id>/info · /teams/<id>/members · /data/<uid>
- *   Items in /data/<uid>/{rounds,tests,practice}/<key> are stored as { j: JSON text, u: updated }.
+ *   Items in /data/<uid>/{rounds,tests,practice,sim}/<key> are stored as { j: JSON text, u: updated }.
  * The session (uid, email, refresh + id token) is kept in localStorage on this site, so a coach stays signed in.
  * Everything takes fetch / storage / time from options so tests can run it against a stand-in server.
  */
@@ -68,9 +68,9 @@
             if (old && old.stamp === stamp && stamp != null) { old.member = M[uid]; out[uid] = old; return; }
             return db('data/' + uid).then(function (d) {
               d = d || {};
-              var A = { uid: uid, stamp: d.stamp == null ? null : d.stamp, name: d.name || (M[uid] && M[uid].name) || 'Athlete', member: M[uid] || {}, profile: {}, rounds: [], tests: [], practice: [] };
+              var A = { uid: uid, stamp: d.stamp == null ? null : d.stamp, name: d.name || (M[uid] && M[uid].name) || 'Athlete', member: M[uid] || {}, profile: {}, rounds: [], tests: [], practice: [], sim: [] };
               try { A.profile = d.profile && d.profile.j ? JSON.parse(d.profile.j) : {}; } catch (e) {}
-              ['rounds', 'tests', 'practice'].forEach(function (kind) { Object.keys(d[kind] || {}).forEach(function (k) { try { A[kind].push(JSON.parse(d[kind][k].j)); } catch (e) {} }); });
+              ['rounds', 'tests', 'practice', 'sim'].forEach(function (kind) { Object.keys(d[kind] || {}).forEach(function (k) { try { A[kind].push(JSON.parse(d[kind][k].j)); } catch (e) {} }); });
               out[uid] = A; changed.push(uid);
             });
           }).catch(function (e) { if (e.code === 'offline' || e.code === 'signedout') throw e; if (old) out[uid] = old; });
