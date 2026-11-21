@@ -3383,3 +3383,13 @@
 .appui .dsppage .dspaimrow { display: flex; align-items: center; gap: 8px; margin: 8px 0 6px; font-size: 12.5px; font-weight: 600; color: #1f2d38; }
 .appui .dsppage .dspaimrow .dspseg { flex: 1; margin: 0; }
 .appui .dsppage .dspaimrow .dspseg button { font-size: 12.5px; padding-left: 4px; padding-right: 4px; }
+
+/* v248: chips on one line with a » when there are more */
+.appui .dsppage .dspydwrap { position: relative; }
+.appui .dsppage .dspydwrap .dspyds { scrollbar-width: none; }
+.appui .dsppage .dspydwrap .dspyds::-webkit-scrollbar { display: none; }
+.appui .dsppage .dspmore { position: absolute; right: -2px; top: 50%; transform: translateY(-62%); width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(23, 48, 31, .14); background: rgba(255, 255, 255, .94); color: #1f2d38; font-size: 19px; font-weight: 700; line-height: 1; display: none; align-items: center; justify-content: center; padding: 0 0 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, .18); cursor: pointer; }
+.appui .dsppage .dspydwrap.more .dspmore { display: flex; }
+.appui.disp .dsppage > .dspydwrap { grid-column: 1 / -1; }
+.appui .dsppage .dspcell.none { background: rgba(255, 255, 255, .45); color: #8a96a2; }
+.appui .dsppage .dspk.bl { background: #1f73c9; border: 1px solid #0d3d6e; }
