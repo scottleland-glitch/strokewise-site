@@ -1078,7 +1078,8 @@
     if (part === 'spider') return o; if (part === 'rest') o = '';
     var V = MYGAME.practiceVsGame(D.cur, PB.cur);
     if (V && !recsOn(who) && /^Practice more /.test(V.headline)) V.headline = V.gap.name + ': ' + Math.round(V.gap.lostShare * 100) + '% of lost strokes, ' + Math.round(V.gap.timeShare * 100) + '% of practice'; // v215: the comparison, no advice
-    if (V) o += '<div class="mgchart prvs frost" id="prvs"><span class="tkeye">Strokes lost vs practice time</span><h2 id="prvshead">' + esc(V.headline) + '</h2><p id="prvslede">' + esc(V.lede) + '</p>' +
+    var vsPer = D.period.name + ' · ' + D.cur.rounds + ' round' + (D.cur.rounds === 1 ? '' : 's'); // v244 (Scott): the time frame this card covers (same as the app)
+    if (V) o += '<div class="mgchart prvs frost" id="prvs"><span class="tkeye">Strokes lost vs practice time</span><small class="prvsper" id="prvsper">' + esc(vsPer) + '</small><h2 id="prvshead">' + esc(V.headline) + '</h2><p id="prvslede">' + esc(V.lede) + '</p>' +
       '<div class="prbars">' + V.rows.map(function (r) {
         return '<div class="prbar' + (r.k === V.gap.k && V.gap.lostShare - V.gap.timeShare >= 0.15 ? ' gap' : '') + '" data-spoke="' + r.k + '"><span>' + esc(r.name) + '</span>' +
           '<i class="bl"><u style="width:' + Math.round(r.lostShare * 100) + '%"></u></i><em>' + Math.round(r.lostShare * 100) + '%</em>' +

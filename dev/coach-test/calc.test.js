@@ -98,9 +98,9 @@ out.forEach((a) => {
 // v240 (Scott): the Score, Strokes gained and By-skill lines are the average of the last 3 rounds (was 5)
 {
   const a = out[0], A = { uid: a.name, name: a.name, rounds: a.rounds, tests: a.tests, practice: a.practice, profile: a.profile, member: { at: now }, stamp: 1 }, D = CALC.detail(A, L, { now, period: 'all' });
-  const exp = (key) => { const seen = []; return D.series.map((p) => { const v = key(p); if (v == null) return null; seen.push(v); return seen.length >= 3 ? seen.slice(-3).reduce((x, y) => x + y, 0) / 3 : null; }); };
+  const exp = (key) => { const seen = []; return D.series.map((p) => { const v = key(p); if (v == null) return null; seen.push(v); const L3 = seen.slice(-3); return L3.reduce((x, y) => x + y, 0) / L3.length; }); }; // v244: from the first round (1, then 2, then the last 3)
   const same = (x, y) => x.length === y.length && x.every((v, i) => (v == null && y[i] == null) || Math.abs(v - y[i]) < 1e-9);
-  t('trend lines: score and SG = average of the last 3 rounds', D.lineN === 3 && same(D.scoreAvg, exp((p) => p.strokes)) && same(D.sgAvg, exp((p) => p.sg18)) && D.sgAvg.filter((v) => v != null).length >= 5);
+  t('trend lines: score and SG = average of the last 3 rounds', D.lineN === 3 && same(D.scoreAvg, exp((p) => p.strokes)) && same(D.sgAvg, exp((p) => p.sg18)) && D.sgAvg.filter((v) => v != null).length >= 5 && D.scoreAvg[D.series.findIndex((p) => p.strokes != null)] != null);
   t('By-skill lines: average of the last 3 rounds with shots in that skill', CALC.CATS.every((c) => same(D.catAvg[c.k], exp((p) => p.cats[c.k]))));
   const fs = require('fs'), src = fs.readFileSync(C + 'app.js', 'utf8') + fs.readFileSync(C + 'pages.js', 'utf8'); t('no "last 5" left in the trend chart labels', !/the line is the average of the last 5|average of the last 5 rounds with shots/.test(src) && /average of the last 3/.test(src));
 }

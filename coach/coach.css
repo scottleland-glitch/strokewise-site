@@ -102,6 +102,14 @@ input:focus, select:focus { outline: none; border-color: var(--green2); box-shad
 .track u { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; }
 .track u.p { background: var(--good); } .track u.n { background: #e2705c; } .track u.l { background: repeating-linear-gradient(45deg, rgba(168,119,26,.0) 0 4px, rgba(168,119,26,.0) 4px 8px); border: 2px dashed #c8962e; background: #fff; }
 .axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--soft); margin: 4px 0 0 142px; width: calc(100% - 250px); }
+/* v244: round page – strokes gained vs practice */
+.rvprows { display: grid; gap: 10px; margin: 10px 0 12px; }
+.rvprow { display: grid; grid-template-columns: 96px 54px minmax(0, 1fr) 62px; grid-template-rows: auto auto; column-gap: 10px; row-gap: 4px; align-items: center; }
+.rvprow b { grid-row: 1 / 3; font-weight: 600; } .rvprow .rvpsg { grid-row: 1 / 3; text-align: right; font-weight: 700; }
+.rvprow em { white-space: nowrap; font-style: normal; font-size: 13.5px; color: var(--soft); text-align: right; font-variant-numeric: tabular-nums; }
+.rvpbar { display: block; height: 9px; border-radius: 9px; background: #eceeea; overflow: hidden; } .rvpbar u { display: block; height: 100%; border-radius: 9px; }
+.rvpbar.ls u, .rvpkey .ls { background: #e2705c; } .rvpbar.pt u, .rvpkey .pt { background: var(--blue); }
+.rvpkey { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; color: var(--soft); } .rvpkey i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .tilesm { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
 .radarwrap svg { width: 100%; height: auto; display: block; } .radarwrap .legend { display: flex; gap: 16px; justify-content: center; font-size: 13px; color: var(--soft); margin-top: 6px; flex-wrap: wrap; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
@@ -181,8 +189,10 @@ a.catrow { color: inherit; text-decoration: none; } a.catrow:hover { background:
 tr.clk { cursor: pointer; } tr.clk:hover td { background: #f4f7f3; } tr.clk td a { text-decoration: none; font-weight: 600; } tr.clk:hover td a { text-decoration: underline; }
 
 /* athlete tabs and pages */
-.atabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); margin: 0 0 20px; scrollbar-width: none; } .atabs::-webkit-scrollbar { display: none; }
-.atabs a { flex: 0 0 auto; padding: 11px 16px; font-weight: 600; font-size: 15px; color: var(--soft); text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -1px; } .atabs a:hover { color: var(--ink); } .atabs a.on { color: var(--green); border-bottom-color: var(--green); }
+/* v244 (Scott): the section links stand out – bold pill buttons that wrap, so Trends, Practice and Tests are never hidden off to the side */
+.atabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.atabs a { flex: 0 0 auto; padding: 10px 18px; font-weight: 700; font-size: 16.5px; color: var(--ink); text-decoration: none; background: #fff; border: 1.5px solid #cfd6cc; border-radius: 999px; box-shadow: 0 1px 2px rgba(20, 39, 26, .06); }
+.atabs a:hover { border-color: var(--green2); color: var(--green); } .atabs a.on { color: #fff; background: var(--green); border-color: var(--green); }
 .subnav { margin: 0 0 8px; font-size: 14.5px; font-weight: 600; } .subnav a { color: var(--green2); text-decoration: none; }
 .subtabs { display: inline-flex; background: #eef0ec; border-radius: 999px; padding: 3px; margin: 0 0 14px; } .subtabs a { padding: 7px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--soft); text-decoration: none; } .subtabs a.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(20, 39, 26, .18); }
 .rhead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; margin: 0 0 16px; } .rhead h2 { margin: 0 0 2px; font-size: 30px; } .rhead .sub { font-size: 14.5px; color: var(--soft); }
@@ -217,7 +227,7 @@ h4.stn { font: 700 15px Inter, sans-serif; margin: 16px 0 6px; }
   .acard { padding: 14px 14px 12px; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 6px 12px; } .acard .av { width: 46px; height: 46px; font-size: 19px; }
   .rhead h2 { font-size: 25px; } .kv { grid-template-columns: 90px 1fr; }
   .appui.ap.full { padding: 6px 10px 14px; border-radius: 16px; } .modal { padding: 0; } .modal > .appui { border-radius: 0; min-height: 100%; }
-  .atabs a { padding: 10px 12px; font-size: 14.5px; } .card { padding: 16px; }
+  .rvprow { grid-template-columns: 74px 44px minmax(0, 1fr) 58px; column-gap: 8px; } .atabs { gap: 7px; } .atabs a { padding: 9px 14px; font-size: 16px; } .card { padding: 16px; }
   .cardhead { flex-wrap: wrap; gap: 10px; } .seg { max-width: 100%; overflow-x: auto; } .seg button { white-space: nowrap; padding: 7px 10px; }
   .rt.cats { table-layout: auto; width: 100%; } .rt.cats .barcol { display: none; }
 }

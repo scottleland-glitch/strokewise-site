@@ -159,7 +159,7 @@
     var series = asc.map(function (r, i) { return { t: r.t, id: r.id, course: r.course, strokes: r.full ? r.strokes : null, toPar: r.toPar, sg18: r.sg18, holes: r.holes,
       cats: CATS.reduce(function (o2, C) { o2[C.k] = r.cats[C.k].n ? r.cats[C.k].sg * 18 / r.holes : null; return o2; }, {}) }; });
     // v240 (Scott): the trend lines are the average of the last 3 rounds that have a number (was 5); a point on every such round
-    function roll(key, n) { var seen = []; return series.map(function (p) { var v = key(p); if (v == null) return null; seen.push(v); return seen.length >= n ? mean(seen.slice(-n)) : null; }); }
+    function roll(key, n) { var seen = []; return series.map(function (p) { var v = key(p); if (v == null) return null; seen.push(v); return mean(seen.slice(-n)); }); } // v244 (Scott): the line starts at the first round – the first two points average the rounds so far
     return { summary: s, tiles: sh.tiles, rounds: sh.rounds, cats: cats, usual: sh.prev ? (sh.prev.usual ? 'your usual (' + sh.prev.rounds + ' rounds before)' : 'the year before') : '', allRounds: P.rows,
       tests: tests, prac: prac, vs: vs, series: series, scoreAvg: roll(function (q) { return q.strokes; }, LINE_N), sgAvg: roll(function (q) { return q.sg18; }, LINE_N), catAvg: CATS.reduce(function (o2, C) { o2[C.k] = roll(function (q) { return q.cats[C.k]; }, LINE_N); return o2; }, {}), lineN: LINE_N, radar: sh };
   }

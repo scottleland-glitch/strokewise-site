@@ -83,6 +83,7 @@
         tile('Strokes gained', sgv(S.sgTotal), 'vs ' + E(B.name)) + tile('Putts', S.putts, (S.putts / S.holesDone).toFixed(1) + ' per hole') +
         tile('Greens in regulation', S.girHoles ? Math.round(100 * S.gir / S.girHoles) + '%' : '–', S.gir + ' / ' + S.girHoles) + tile('Fairways hit', S.fwTotal ? Math.round(100 * S.fwHit / S.fwTotal) + '%' : '–', S.fwHit + ' / ' + S.fwTotal) +
         tile('Penalties', S.penalties, 'strokes') + '</div>';
+      h += roundVsPractice(c.A, row, S);
       h += withAV(uid, function () { AV.setRound(id);
         var out = '<div class="card"><h3>Scorecard</h3><p class="sub">Hole by hole: par, length, score, strokes gained, putts, greens and fairways. Click a hole for its shots.</p>' + panel(AV.html.scorecard(r, S), 'sc') +
           '<p><button class="btn sec" data-act="replay" data-v="0">▶ Hole replay</button> <a class="btn sec" href="' + H(uid, 'round/' + encodeURIComponent(id) + '/birdie') + '">Birdie zone</a></p></div>';
@@ -95,6 +96,25 @@
         return out; });
       h += shotsCard(uid, row, S);
       return h;
+    }
+    // v244 (Scott): this round's strokes gained by skill next to the practice in the 30 days before it
+    function roundVsPractice(A, row, S) {
+      if (!MG || !MG.SPOKES) return '';
+      var acc = {}; MG.SPOKES.forEach(function (sp) { acc[sp.k] = { n: 0, sg: 0 }; });
+      S.holes.forEach(function (hh) { if (!hh.done) return; hh.shots.forEach(function (sh) { if (sh.layup) return; for (var i = 0; i < MG.SPOKES.length; i++) if (MG.SPOKES[i].test(sh)) { acc[MG.SPOKES[i].k].n++; acc[MG.SPOKES[i].k].sg += sh.sg; break; } }); });
+      var to = row.t, from = to - 30 * DAY, logs = MG.validPractice(A.practice || []).filter(function (e) { var t = Date.parse(e.date); return t >= from && t < to; });
+      var rows = CATS.map(function (C) { var n = 0, sg = 0, min = 0; C.spokes.forEach(function (k) { if (acc[k]) { n += acc[k].n; sg += acc[k].sg; } });
+        logs.forEach(function (e) { if (C.spokes.indexOf(e.spoke) >= 0) min += e.min; }); return { C: C, n: n, sg: n ? sg : null, lost: n && sg < 0 ? -sg : 0, min: min }; });
+      var L = rows.reduce(function (t, x) { return t + x.lost; }, 0), M = rows.reduce(function (t, x) { return t + x.min; }, 0);
+      var worst = rows.filter(function (x) { return x.lost > 0; }).sort(function (a, b) { return b.lost - a.lost; })[0];
+      var pc = function (v, tot) { return tot ? Math.round(v / tot * 100) : 0; };
+      var lede = !M ? 'No practice logged in the 30 days before this round.' : worst ? 'Most strokes lost: ' + worst.C.name.toLowerCase() + ' (' + pc(worst.lost, L) + '% of the strokes lost, ' + pc(worst.min, M) + '% of the practice).' : 'No skill lost strokes against the benchmark this round.';
+      return '<div class="card rvp" id="rvp"><h3>Strokes gained vs practice</h3><p class="sub">This round by skill, next to the practice logged in the 30 days before it (' + fd(from) + ' – ' + fd(to - DAY) + ' · ' + (M ? X.hm(M) : 'none') + ' in ' + logs.length + ' session' + (logs.length === 1 ? '' : 's') + '). ' + E(lede) + '</p>' +
+        '<div class="rvprows">' + rows.map(function (x) {
+          return '<div class="rvprow"><b>' + x.C.name + '</b><span class="rvpsg">' + (x.sg == null ? '<span class="muted">–</span>' : sgv(x.sg)) + '</span>' +
+            '<i class="rvpbar ls" title="Share of strokes lost"><u style="width:' + pc(x.lost, L) + '%"></u></i><em>' + pc(x.lost, L) + '%</em>' +
+            '<i class="rvpbar pt" title="Share of practice time"><u style="width:' + pc(x.min, M) + '%"></u></i><em>' + (x.min ? X.hm(x.min) : '0m') + '</em></div>'; }).join('') + '</div>' +
+        '<div class="rvpkey"><span><i class="ls"></i>Share of strokes lost this round</span><span><i class="pt"></i>Practice in the 30 days before</span></div></div>';
     }
     function puttBrk(r) { var x = AV.html.puttBrk(r); return x ? panel(x, 'pb') : ''; }
     function sgTable(S, uid, row) {
@@ -180,7 +200,7 @@
       h += '<div class="tilesm">' + tile('Last 5 rounds', D.avg5 == null ? '–' : sgv(D.avg5), 'SG per 18 holes') + tile('Usual', D.usual == null ? '–' : sgv(D.usual), 'the 20 rounds before') +
         tile('Change', D.delta == null ? '–' : arrowSG(D.delta) + ' ' + sgv(D.delta), 'vs usual') + tile('Shots', D.shots, 'last 20 rounds') + tile('Practice', MG && D.m30 ? X.hm(D.m30) : '0m', 'last 30 days · ' + X.hm(D.m90) + ' in 90') + '</div>';
       h += '<div class="card"><h3>' + C.name + ' per round</h3><p class="sub">Strokes gained per 18 holes. Dots are rounds, the line is the average of the last 3. Click a round in the table for its shots.</p>' + CH.line({ label: C.name + ' per round', zero: true, yFmt: function (v) { return CALC.fmtSG(v); }, series: [{ pts: series.map(function (p) { return { t: p.t, v: p.v, tip: fd(p.t, true) + ' · ' + p.course + ' · ' + CALC.fmtSG(p.v) }; }), dots: true, line: false, color: '#9bb7a5' },
-        { pts: (function () { var seen = []; return series.map(function (p) { if (p.v == null) return { t: p.t, v: null }; seen.push(p.v); var L = seen.slice(-3); return { t: p.t, v: seen.length >= 3 ? L.reduce(function (a, b) { return a + b; }, 0) / 3 : null }; }); })(), color: '#1f6f4a', width: 2.5 }] }) + '</div>'; // v240: dots are rounds, the line the average of the last 3
+        { pts: (function () { var seen = []; return series.map(function (p) { if (p.v == null) return { t: p.t, v: null }; seen.push(p.v); var L = seen.slice(-3); return { t: p.t, v: L.reduce(function (a, b) { return a + b; }, 0) / L.length }; /* v244: from the first round */ }); })(), color: '#1f6f4a', width: 2.5 }] }) + '</div>'; // v240: dots are rounds, the line the average of the last 3
       h += '<div class="grid2 even"><div class="card"><h3>Worst shots</h3><p class="sub">The 12 costliest ' + C.name.toLowerCase() + ' shots in the last 20 rounds.</p>' + shotList(uid, D.worst) + '</div><div class="card"><h3>Best shots</h3><p class="sub">The 5 best.</p>' + shotList(uid, D.best) + '</div></div>';
       h += '<div class="card"><h3>Rounds</h3><div class="scroll"><table class="rt"><thead><tr><th>Date</th><th class="l">Course</th><th>Shots</th><th>SG</th><th>SG per 18</th></tr></thead><tbody>' + D.rows.slice(0, 30).map(function (r) { var u = H(uid, 'round/' + encodeURIComponent(r.id));
         return '<tr class="clk" data-href="' + u + '"><td><a href="' + u + '">' + fd(r.t, true) + '</a></td><td class="l">' + E(r.course) + '</td><td>' + r.n + '</td><td>' + (r.sg == null ? '<span class="muted">–</span>' : sgv(r.sg, 2)) + '</td><td>' + (r.sg18 == null ? '<span class="muted">–</span>' : sgv(r.sg18)) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
