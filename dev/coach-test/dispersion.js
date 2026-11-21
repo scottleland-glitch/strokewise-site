@@ -41,7 +41,7 @@ const FAKE = 18895, WEB = 18896, BASE = 'http://127.0.0.1:' + WEB + '/coach/';
       const before = await p.textContent('#dspbest'); await p.selectOption('select[data-sel="bench"]', 'd1m'); await p.waitForTimeout(300); assert.notStrictEqual(await p.textContent('#dspbest'), before, 'benchmark changes the numbers');
       // v247 rounds, by distance (the athlete's real rounds)
       await p.click('[data-act="dspsrc"][data-v="rounds"]'); await p.waitForSelector('#dspactual, #dspfew'); assert.ok(await p.$('#dspactual'), 'round dispersion shows'); await p.waitForTimeout(300); await p.screenshot({ path: OUT + '/05-' + tag + '-rounds.png', fullPage: true });
-      assert.ok(await p.$('#dsprgrid'), 'pin grid'); const c1 = await p.$('#dsprgrid .dspcell[data-act="dsprpin"]'); if (c1) { await c1.click(); await p.waitForTimeout(2600); assert.match(await p.textContent('#dspactual, #dspfew'), /pins/); await p.screenshot({ path: OUT + '/07-' + tag + '-rounds-pin.png', fullPage: true }); }
+      await p.click('[data-act="dspsrc"][data-v="pins"]'); await p.waitForSelector('#dsprgrid'); assert.ok(await p.$('#dsprgrid'), 'pin grid'); const c1 = await p.$('#dsprgrid .dspcell[data-act="dsprpin"]'); if (c1) { await c1.click(); await p.waitForTimeout(2600); assert.match(await p.textContent('#dspactual, #dspfew'), /pins/); await p.screenshot({ path: OUT + '/07-' + tag + '-rounds-pin.png', fullPage: true }); }
       await p.click('[data-act="dspsrc"][data-v="sim"]'); await p.waitForSelector('#dspgrid');
       // an athlete with no sim shots
       await p.evaluate((u) => { location.hash = '#/a/' + encodeURIComponent(u) + '/dispersion'; }, A2.uid); await p.waitForSelector('#dspempty'); assert.match(await p.textContent('#dspempty'), /No sim shots shared yet/);

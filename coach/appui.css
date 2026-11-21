@@ -3393,3 +3393,12 @@
 .appui.disp .dsppage > .dspydwrap { grid-column: 1 / -1; }
 .appui .dsppage .dspcell.none { background: rgba(255, 255, 255, .45); color: #8a96a2; }
 .appui .dsppage .dspk.bl { background: #1f73c9; border: 1px solid #0d3d6e; }
+/* v249 Pin location view: a compact grid above the picture so both fit on the screen */
+.appui .dsppage .dsprgrid { padding: 8px 10px 6px; }
+.appui .dsppage .dsprgh { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; }
+.appui .dsppage .dsprgrid .dspgrid { gap: 4px; padding: 4px 6px; }
+.appui .dsppage .dsprgrid .dspcell { min-height: 40px; padding: 2px; }
+.appui .dsppage .dsprgrid .dspcell b { font-size: 13.5px; }
+.appui .dsppage .dsprgrid .dspcell span { font-size: 9.5px; }
+.appui .dsppage .dsprgrid .dspgback, .appui .dsppage .dsprgrid .dspgfront { font-size: 9.5px; }
+.appui .dsppage .dsprgrid .dspnote { margin: 4px 2px 0; font-size: 11px; }
