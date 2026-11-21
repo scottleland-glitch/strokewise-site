@@ -29,15 +29,19 @@ const FAKE = 18895, WEB = 18896, BASE = 'http://127.0.0.1:' + WEB + '/coach/';
       assert.ok(await p.$('.atabs a[href$="/dispersion"]'), 'Dispersion tab'); await p.click('.atabs a[href$="/dispersion"]'); await p.waitForSelector('.appui.disp #dspcv');
       assert.strictEqual(await p.textContent('.atabs a.on'), 'Dispersion'); assert.strictEqual(await p.$('.appui .dsppage .topbar'), null, 'no phone top bar');
       assert.strictEqual(await p.$('#dspfile'), null, 'no import'); assert.strictEqual(await p.$('[data-act="dspmanual"]'), null, 'no enter shots'); assert.strictEqual(await p.$('.dspdel'), null, 'no delete');
-      assert.deepStrictEqual(await p.$$eval('.dspyd b', (e) => e.map((x) => x.textContent)), ['120', '150']); assert.strictEqual(await p.textContent('.dspyd.sel b'), '150');
+      assert.deepStrictEqual(await p.$$eval('#dspyds .dspyd b', (e) => e.map((x) => x.textContent)), ['PW', '8i']); assert.strictEqual(await p.textContent('#dspyds .dspyd.sel b'), '8i');
       assert.match(await p.textContent('.dspstrat .dspsub'), /click a pin/);
       await p.waitForTimeout(400); await p.screenshot({ path: OUT + '/01-' + tag + '.png', fullPage: true });
       await p.click('[data-act="dsppin"][data-v="frontright"]'); await p.waitForTimeout(700); await p.locator('.dspstrat').screenshot({ path: OUT + '/02-' + tag + '-pin-hop.png' });
       await p.waitForTimeout(1600); await p.locator('.dspstrat').screenshot({ path: OUT + '/03-' + tag + '-pin.png' }); assert.match(await p.textContent('#dspbest'), /Front right/);
+      await p.click('[data-act="dspaim"][data-v="gir"]'); await p.waitForTimeout(1200); assert.match(await p.textContent('#dspbest'), /most greens: aim/); await p.locator('.dspstrat').screenshot({ path: OUT + '/06-' + tag + '-aim.png' }); await p.click('[data-act="dspaim"][data-v="flag"]');
       await p.click('#dspgo'); await p.waitForTimeout(1500); await p.locator('.dspplay').screenshot({ path: OUT + '/04-' + tag + '-flight.png' });
-      await p.click('[data-act="dspyd"][data-v="120"]'); await p.waitForSelector('.dspyd.sel'); assert.strictEqual(await p.textContent('.dspyd.sel b'), '120');
+      await p.click('[data-act="dspclub"][data-v="pw"]'); await p.waitForSelector('.dspyd.sel'); assert.strictEqual(await p.textContent('#dspyds .dspyd.sel b'), 'PW');
       // benchmark switch recalculates
       const before = await p.textContent('#dspbest'); await p.selectOption('select[data-sel="bench"]', 'd1m'); await p.waitForTimeout(300); assert.notStrictEqual(await p.textContent('#dspbest'), before, 'benchmark changes the numbers');
+      // v247 rounds, by distance (the athlete's real rounds)
+      await p.click('[data-act="dspsrc"][data-v="rounds"]'); await p.waitForSelector('#dspactual, #dspfew'); assert.ok(await p.$('#dspactual'), 'round dispersion shows'); await p.waitForTimeout(300); await p.screenshot({ path: OUT + '/05-' + tag + '-rounds.png', fullPage: true });
+      await p.click('[data-act="dspsrc"][data-v="sim"]'); await p.waitForSelector('#dspgrid');
       // an athlete with no sim shots
       await p.evaluate((u) => { location.hash = '#/a/' + encodeURIComponent(u) + '/dispersion'; }, A2.uid); await p.waitForSelector('#dspempty'); assert.match(await p.textContent('#dspempty'), /No sim shots shared yet/);
       assert.deepStrictEqual(errs, []); assert.deepStrictEqual(writes, [], 'read-only: nothing written'); console.log('PASS ' + tag);

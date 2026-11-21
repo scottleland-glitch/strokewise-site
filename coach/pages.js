@@ -28,7 +28,7 @@
     function withAV(uid, fn) { var c = ctx(uid), bl = benchId(uid, c.P); if (depth++ === 0) AV.enter(c.A, bl); try { return fn(c.A, c.P, bl); } finally { if (--depth === 0) AV.leave(); } }
     // the app's wording, for the web: no "slip", no phone-only hints. Only text between tags and in labels is touched, never class names.
     function webText(html) {
-      var fix = function (t) { return t.replace(/\bSlipping\b/g, 'Trending down').replace(/\bSlipped\b/g, 'Dropped').replace(/\bslipping\b/g, 'trending down').replace(/\bslipped\b/g, 'dropped').replace(/\bslips\b/g, 'drops').replace(/\bslip\b/g, 'drop').replace(/tap a hole to edit · swipe for more/g, 'click a hole for its shots').replace(/\bTap a row to use it\b/g, 'Click a row to use it').replace(/\bpractise\b/g, 'practice').replace(/Swipe the chart for earlier weeks\./g, 'Scroll the chart sideways for earlier weeks.').replace(/ · tap a pin$/, ' · click a pin').replace(/Tap a box to see/g, 'Click a box to see').replace(/^Your pattern at /, 'Pattern at ').replace(/ balls from your (\d+) sim shot/, ' balls from $1 sim shot'); };
+      var fix = function (t) { return t.replace(/\bSlipping\b/g, 'Trending down').replace(/\bSlipped\b/g, 'Dropped').replace(/\bslipping\b/g, 'trending down').replace(/\bslipped\b/g, 'dropped').replace(/\bslips\b/g, 'drops').replace(/\bslip\b/g, 'drop').replace(/tap a hole to edit · swipe for more/g, 'click a hole for its shots').replace(/\bTap a row to use it\b/g, 'Click a row to use it').replace(/\bpractise\b/g, 'practice').replace(/Swipe the chart for earlier weeks\./g, 'Scroll the chart sideways for earlier weeks.').replace(/ · tap a pin$/, ' · click a pin').replace(/Tap a box to see/g, 'Click a box to see').replace(/^Your (\S+) pattern /, '$1 pattern ').replace(/^Your (\d+) approach/, '$1 approach').replace(/ balls from your (\d+) sim shot/, ' balls from $1 sim shot'); };
       return String(html).replace(/>([^<]+)</g, function (m, t) { return '>' + fix(t) + '<'; }).replace(/(aria-label|title)="([^"]*)"/g, function (m, a, t) { return a + '="' + fix(t) + '"'; });
     }
     function panel(html, cls) { return '<div class="appui ap ' + (cls || '') + '">' + webText(html) + '</div>'; }
@@ -345,6 +345,7 @@
           sessions: function () { return DISP.validSessions(JSON.parse(JSON.stringify((ST.athletes[dspUid] || {}).sim || []))); }, saveSessions: function () {},
           players: function () { return [(ST.athletes[dspUid] || {}).name || 'Athlete']; }, me: function () { return (ST.athletes[dspUid] || {}).name || 'Athlete'; },
           same: function () { return true; }, // everything shared on this athlete's link is theirs
+          rounds: function () { return ((ST.athletes[dspUid] || {}).rounds || []).filter(function (r) { return r && Array.isArray(r.holes) && r.holes.length && SG.summarize(r).holesDone === r.holes.length; }); }, // v247 actual dispersion
           baselineOf: function () { var c = ctx(dspUid); return benchId(dspUid, c.P); },
           render: function () { if (window.APPVIEWS && APPVIEWS.hooks.render) APPVIEWS.hooks.render(); }, toast: function () {},
           tourFt: function (who, yd) { var L = []; ((ST.athletes[dspUid] || {}).rounds || []).filter(function (r) { return r && r.play === 'tournament' && Array.isArray(r.holes); }).forEach(function (r) {
@@ -353,7 +354,7 @@
     }
     function dispersionPage(uid) {
       var ui = dspUI(uid); if (!ui) return empty('Dispersion isn’t available.');
-      return pageHead('Dispersion', 'Sim and launch-monitor shots: where the ball lands around the flag, which pins to attack and where to aim. Same screens as the app.', benchSelect(uid, ctx(uid).P)) + '<div class="apphost">' + panel(ui.html(), 'full disp') + '</div>';
+      return pageHead('Dispersion', 'Launch monitor shots by club (where the ball lands, which pins to attack, where to aim) or what actually happened in rounds by distance. Same screens as the app.', benchSelect(uid, ctx(uid).P)) + '<div class="apphost">' + panel(ui.html(), 'full disp') + '</div>';
     }
     function dspAct(uid, act, v, el) { var ui = dspUI(uid); if (ui) ui.act(act, v, el); }
 
@@ -391,7 +392,7 @@
       [].forEach.call(root2.querySelectorAll('.appui [data-act]'), function (el) { if (!ALLOWED[el.getAttribute('data-act')]) el.setAttribute('data-na', '1'); });
     }
     var NAV = { goHole: 1, setbl: 1 }, ALLOWED = {};
-    ('info mgperiod mgknow trzoom trwk strange stpick stpickev stpickclr stround stcmp stcat stpmb stcur stpt blminest blminehist tkknow stx map mapscope mapclose pinseg proxb proxlie clubsel heat pmg puttn cmpn cmpkind cmpgrp cmpside bzscope replay rpgreen rpgreenback rpghole rpclose wkoff wkspan wkfull wkclose prfull prclose plweek plbench sgtoggle prplan sgtrow sgttrend sgthub setbl goHole wkday wkdayclose prday prmoredays dspyd dsppin dspplay dspall dspmode dspfac dsptip').split(' ').forEach(function (k) { ALLOWED[k] = 1; });
+    ('info mgperiod mgknow trzoom trwk strange stpick stpickev stpickclr stround stcmp stcat stpmb stcur stpt blminest blminehist tkknow stx map mapscope mapclose pinseg proxb proxlie clubsel heat pmg puttn cmpn cmpkind cmpgrp cmpside bzscope replay rpgreen rpgreenback rpghole rpclose wkoff wkspan wkfull wkclose prfull prclose plweek plbench sgtoggle prplan sgtrow sgttrend sgthub setbl goHole wkday wkdayclose prday prmoredays dspyd dsppin dspplay dspall dspmode dspfac dsptip dspclub dspryd dspsrc dsprplay dspaim').split(' ').forEach(function (k) { ALLOWED[k] = 1; });
     function renderWeb(uid, parts, query) { var r = render(uid, parts, query); if (r && r.html) r.html = webText(r.html); return r; }
     return { render: renderWeb, overlay: overlay, after: after, openDay: openDay, dspAct: dspAct, RS: RS, PS: PS, SHOTS: SHOTS, withAV: withAV, ALLOWED: ALLOWED, H: H };
   };
