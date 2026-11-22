@@ -126,7 +126,11 @@ const checks = []; const ok = (name, cond, extra) => { checks.push([name, !!cond
   ok('hole page: shots with club, miss, putt read, SG', ['Club', 'Miss', 'Putt read', 'SG'].every((x) => true) && (await p.$$('.rt.shots tbody tr.shot')).length >= 2);
   await p.screenshot({ path: OUT + '/05-hole-page-1440x900.png' });
   await p.click('[data-act=replay]'); await p.waitForSelector('.modal .appui'); await p.waitForTimeout(500); ok('hole replay opens on the site (modal)', (await p.$$('.modal')).length === 1);
-  await p.screenshot({ path: OUT + '/05b-hole-replay-1440x900.png' }); await p.click('.modal [data-act=rpclose]'); await p.waitForTimeout(300); ok('replay closes', (await p.$$('.modal')).length === 0);
+  await p.screenshot({ path: OUT + '/05b-hole-replay-1440x900.png' });
+  // v251: ▶ Play flies the shots on a canvas over the map, then returns to the static replay
+  await p.click('.modal #rpplay'); await p.waitForTimeout(2500); ok('replay ▶ Play animates (canvas over the map)', !!(await p.$('.modal #rpcanvas')) && /Stop/.test(await p.textContent('.modal #rpplay')));
+  await p.screenshot({ path: OUT + '/05c-hole-replay-playing-1440x900.png' }); await p.click('.modal #rpplay'); await p.waitForTimeout(300); ok('Stop returns to the static map', !(await p.$('.modal #rpcanvas')));
+  await p.click('.modal [data-act=rpclose]'); await p.waitForTimeout(300); ok('replay closes', (await p.$$('.modal')).length === 0);
   await p.goBack(); await p.waitForSelector('.scard'); await p.waitForTimeout(300);
   // maps from the round stats rows
   await p.click('.appui.stats [data-act=map][data-v=gir]'); await p.waitForSelector('.modal .appui'); await p.waitForTimeout(500); ok('a round-stats row opens its map (greens) on the site', (await p.$$('.modal')).length === 1 && p.url().startsWith(BASE));

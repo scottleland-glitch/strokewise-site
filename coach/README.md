@@ -20,6 +20,7 @@ Routes (after `#/a/<athlete id>`): *(overview)* · `rounds` · `round/<id>` · `
 - `pages.js` – the athlete pages. Native desktop layouts for rounds, round, hole, practice, tests and skills. Stats, My Game, Trends, Practice plan, Compare and Birdie zone are the app's own panels inside `.appui`.
 - `lib/appviews.js` – GENERATED. The app's view code (stats, my game, trends, plan, scorecard, maps, replay, test screens) cut out of the app's `app.js` with its dependencies, run against a read-only stand-in for the phone. Never edit by hand.
 - `appui.css` – GENERATED. The app's CSS scoped under `.appui`.
+- `lib/replay-anim.js` – the app's v251 hole replay ▶ Play animation, copied unchanged. `appviews.js` has only `replaySVG` / `replayHTML` swapped in from app v251 (the rest is still the v240 cut).
 - `lib/*.js` – the app's pure modules, copied unchanged (`sg`, `mygame`, `trends`, `shortgame`, `shortgame-ui`, `bag`, `birdie`, `insights`, `plan`, `weekahead`).
 - Regenerate after the app changes: `NODE_PATH=<dir with acorn, postcss, eslint-scope> node dev/port/extract-app.js <app>/app.js > coach/lib/appviews.js` and `node dev/port/scope-css.js <app>/styles.css > coach/appui.css`.
 - Only view acts are allowed (`ALLOWED` in `pages.js`); anything that would edit, log, start a session or open a data-entry screen is dropped and its button hidden.
