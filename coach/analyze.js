@@ -69,12 +69,21 @@
     return { build: B, cur: B.cur, prev: B.prev, cats: catsOf(B.cur), prevCats: B.prev ? catsOf(B.prev) : null, tiles: B.cur.tiles, rounds: B.cur.rounds };
   }
 
-  function trendOf(P) { // last-5 average score vs the 5 before it (18-hole rounds only): green down = better, red up = worse
+  // v253 (Scott): score trend = a trendline through the last 10 full rounds (was last-5 avg vs the 5 before, which flipped
+  // when a round slid from one side to the other). Least-squares line, rounds evenly spaced.
+  // Strokes per round: + = scores going up (worse), - = going down (better). Within ±0.25 a round it is steady.
+  var TREND_N = 10, TREND_MIN = 6, TREND_FLAT = 0.25, TREND_ALERT = 0.5;
+  function trendOf(P) {
     var full = P.rows.filter(function (r) { return r.full; }).map(function (r) { return r.strokes; });
-    var a5 = full.length ? mean(full.slice(0, 5)) : null, p5 = full.length >= 6 ? mean(full.slice(5, 10)) : null;
-    if (a5 == null || p5 == null) return { a5: a5, p5: null, dir: null, diff: 0, n: full.length };
-    var d = a5 - p5; return { a5: a5, p5: p5, diff: Math.abs(d), dir: d < -0.3 ? 'better' : d > 0.3 ? 'worse' : 'flat', n: full.length };
+    var a5 = full.length ? mean(full.slice(0, 5)) : null, n = full.length;
+    if (n < TREND_MIN) return { a5: a5, slope: null, dir: null, diff: 0, n: n, used: n };
+    var y = full.slice(0, TREND_N).reverse(), mx = (y.length - 1) / 2, my = mean(y), num = 0, den = 0; // oldest first
+    y.forEach(function (v, i) { num += (i - mx) * (v - my); den += (i - mx) * (i - mx); });
+    var m = num / den;
+    return { a5: a5, slope: m, diff: Math.abs(m), dir: m < -TREND_FLAT ? 'better' : m > TREND_FLAT ? 'worse' : 'flat', n: n, used: y.length };
   }
+  function trendWord(tr) { return !tr || !tr.dir ? '' : tr.dir === 'better' ? 'decreasing' : tr.dir === 'worse' ? 'increasing' : 'steady'; }
+  function trendRate(tr) { var r = Math.round(tr.slope * 10) / 10; return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r).toFixed(1) + '/round'; }
 
   function testsOf(A, L, P) {
     var X = lib(L), done = X.T.validTests(A.tests || []).filter(function (t) { return t.done; }).sort(function (a, b) { return tOf(b) - tOf(a); });
@@ -104,7 +113,7 @@
       var w = TD && TD.areas.filter(function (a) { return a.ok && a.heading && !named[a.k]; })[0]; // v218: the dashed line starts after 3 rounds (the app dropped the confidence levels)
       if (w) F.push({ tone: 'amber', kind: 'trend', text: CATS.filter(function (c) { return c.k === w.k; })[0].name + ' forecast: trending worse', to: 'trends' });
     } catch (e) {}
-    if (trend.dir === 'worse' && trend.diff >= 1.5) F.push({ tone: 'red', kind: 'score', text: 'Score ↑ ' + trend.diff.toFixed(1) + ' vs the 5 rounds before', to: 'rounds' });
+    if (trend.dir === 'worse' && trend.diff >= TREND_ALERT) F.push({ tone: 'red', kind: 'score', text: 'Score trend increasing ' + trendRate(trend) + ' (last ' + trend.used + ' rounds)', to: 'rounds' });
     if (!rows.length) F.push({ tone: 'amber', kind: 'none', text: (A.rounds || []).length ? 'No finished rounds yet' : 'No rounds shared yet', to: 'rounds' });
     else if (now - last.t > 21 * DAY) F.push({ tone: 'amber', kind: 'quiet', text: 'No rounds in ' + Math.floor((now - last.t) / (7 * DAY)) + ' weeks', to: 'round/' + last.id });
     if (rows.length && practiceOn && (!tests.length || now - tests[0].t > 35 * DAY)) F.push({ tone: 'amber', kind: 'test', text: tests.length ? 'Short game test due' : 'No short game test yet', to: tests.length ? 'test/' + tests[0].id : 'tests' });
@@ -187,6 +196,6 @@
     return { cat: C, rows: rows, series: asc, avg5: avg5, usual: usual, delta: avg5 != null && usual != null ? avg5 - usual : null, shots: shots.length, worst: worst, best: best, logs: logs, m30: m30, m90: m90, tests: tests, testCat: tcat };
   }
 
-  var API = { skillDetail: skillDetail, testsOf: testsOf, freshOf: freshOf, seenOf: seenOf, shotText: shotText, dtxt: dtxt, tOf: tOf, CATS: CATS, TEST_CATS: TEST_CATS, PERIODS: PERIODS, summary: summary, detail: detail, prepare: prepare, benchOf: benchOf, fmtSG: fmtSG, itemT: itemT };
+  var API = { skillDetail: skillDetail, testsOf: testsOf, freshOf: freshOf, seenOf: seenOf, shotText: shotText, dtxt: dtxt, tOf: tOf, CATS: CATS, TEST_CATS: TEST_CATS, PERIODS: PERIODS, summary: summary, detail: detail, prepare: prepare, benchOf: benchOf, fmtSG: fmtSG, itemT: itemT, trendWord: trendWord, trendRate: trendRate };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.COACHCALC = API;
 })(typeof self !== 'undefined' ? self : this);

@@ -31,10 +31,10 @@
   function ago(t) { var m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) === 1 ? 'yesterday' : Math.round(m / 1440) + ' days ago'; }
   function par(n) { return n === 0 ? 'E' : (n > 0 ? '+' : '−') + Math.abs(n); }
   function sgHTML(v, d) { if (v == null) return '<span class="muted">–</span>'; return '<span class="sgv ' + (v > 0.049 ? 'pos' : v < -0.049 ? 'neg' : '') + '">' + CALC.fmtSG(v, d) + '</span>'; }
-  function arrowHTML(tr) {
+  function arrowHTML(tr) { // v253: trendline through the last 10 full rounds – decreasing (green) / increasing (red) / steady
     if (!tr || !tr.dir) return '<span class="muted" title="Needs 6 full rounds">–</span>';
     var a = tr.dir === 'better' ? '↓' : tr.dir === 'worse' ? '↑' : '→';
-    return '<span title="Average of the last 5 rounds (' + tr.a5.toFixed(1) + ') vs the 5 before (' + tr.p5.toFixed(1) + ')"><span class="arrow ' + tr.dir + '">' + a + '</span> <span class="sgv ' + (tr.dir === 'flat' ? '' : tr.dir === 'better' ? 'pos' : 'neg') + '">' + tr.diff.toFixed(1) + '</span></span>';
+    return '<span title="Trendline through the last ' + tr.used + ' full rounds: ' + CALC.trendRate(tr) + ' a round"><span class="arrow ' + tr.dir + '">' + a + '</span> <span class="sgv ' + (tr.dir === 'flat' ? '' : tr.dir === 'better' ? 'pos' : 'neg') + '">' + CALC.trendWord(tr) + ' ' + CALC.trendRate(tr) + '</span></span>';
   }
   function H(uid, rest) { return '#/a/' + encodeURIComponent(uid) + (rest ? '/' + rest : ''); }
   function hm(min) { min = Math.round(min || 0); var h = Math.floor(min / 60), m = min % 60; return h ? h + 'h' + (m ? ' ' + m + 'm' : '') : m + 'm'; }
@@ -145,13 +145,13 @@
   }
   function whenLink(s) { var l = s.latest; if (!l) return H(s.uid); return H(s.uid, (l.kind === 'rounds' ? 'round/' : l.kind === 'tests' ? 'test/' : 'practice/') + encodeURIComponent(l.id)); }
   function cardHTML(s) {
-    var tr = s.trend, a5 = tr && tr.a5, ar = !tr || !tr.dir ? '' : '<small class="' + (tr.dir === 'better' ? 'cmup' : tr.dir === 'worse' ? 'cmdn' : 'cmflat') + '">' + (tr.dir === 'better' ? '↓' : tr.dir === 'worse' ? '↑' : '→') + ' ' + tr.diff.toFixed(1) + '</small>';
+    var tr = s.trend, a5 = tr && tr.a5, ar = !tr || !tr.dir ? '' : '<small class="' + (tr.dir === 'better' ? 'cmup' : tr.dir === 'worse' ? 'cmdn' : 'cmflat') + '">' + (tr.dir === 'better' ? '↓' : tr.dir === 'worse' ? '↑' : '→') + ' ' + CALC.trendRate(tr) + '</small>';
     var hot = needs(s), u = encodeURIComponent(s.uid);
     return '<article class="acard' + (hot ? ' hot' : '') + '" data-act="open" data-uid="' + E(s.uid) + '">' +
       '<a class="av" href="#/a/' + u + '" style="background:' + avColor(s.name) + '" aria-hidden="true" tabindex="-1">' + E(String(s.name).charAt(0).toUpperCase()) + '</a>' +
       '<div class="amain"><div class="aname"><a class="nm" href="#/a/' + u + '">' + E(s.name) + '</a>' + (hot ? '<span class="bang" title="Needs attention" aria-label="Needs attention">!</span>' : '') + '</div>' +
       '<a class="awhen" href="' + whenLink(s) + '">' + E(whenTxt(s)) + '</a></div>' +
-      '<div class="ascore" title="Average score of the last 5 full rounds, arrow against the 5 before">' + (a5 != null ? '<b>' + a5.toFixed(1) + '</b>' + ar : '<b>–</b>') + '<em>AVG (5)</em></div>' +
+      '<div class="ascore" title="Average score of the last 5 full rounds; arrow = score trend over the last 10 (strokes a round)">' + (a5 != null ? '<b>' + a5.toFixed(1) + '</b>' + ar : '<b>–</b>') + '<em>AVG (5)</em></div>' +
       '<div class="atags">' + tagsHTML(s, 3) + '</div></article>';
   }
   function listView() {
@@ -237,7 +237,7 @@
     var A = ST.athletes[uid], order = sorted(sums()).map(function (x) { return x.uid; }), i = order.indexOf(uid), prev = order[i - 1], next = order[i + 1], to = (TABS.filter(function (t) { return t[0] === tab; })[0] || [0, 0, ''])[2];
     return '<div class="crumb"><a href="#/">‹ All athletes</a><span class="sp"></span>' +
       (prev ? '<a href="' + H(prev, to) + '">‹ ' + E(ST.athletes[prev].name) + '</a>' : '') + (next ? '<a href="' + H(next, to) + '">' + E(ST.athletes[next].name) + ' ›</a>' : '') + '</div>' +
-      '<div class="head"><div class="t"><span class="eyebrow">Athlete</span><h1>' + E(A.name) + (needs(s) ? ' <span class="bang" title="Needs attention">!</span>' : '') + '</h1><div class="sub">Benchmark ' + E(s.blName) + ' · ' + s.n + ' round' + (s.n === 1 ? '' : 's') + ' shared' + (s.last ? ' · last round ' + fd(s.last.t, true) : '') + (s.trend.dir ? ' · ' + arrowHTML(s.trend) + ' score trend' : '') + '</div></div>' + (extra || '') + '</div>' +
+      '<div class="head"><div class="t"><span class="eyebrow">Athlete</span><h1>' + E(A.name) + (needs(s) ? ' <span class="bang" title="Needs attention">!</span>' : '') + '</h1><div class="sub">Benchmark ' + E(s.blName) + ' · ' + s.n + ' round' + (s.n === 1 ? '' : 's') + ' shared' + (s.last ? ' · last round ' + fd(s.last.t, true) : '') + (s.trend.dir ? ' · score trend ' + arrowHTML(s.trend) : '') + '</div></div>' + (extra || '') + '</div>' +
       '<nav class="atabs" aria-label="Athlete sections">' + TABS.map(function (t) { return '<a href="' + H(uid, t[2]) + '" class="' + (t[0] === tab ? 'on' : '') + '"' + (t[0] === tab ? ' aria-current="page"' : '') + '>' + t[1] + '</a>'; }).join('') + '</nav>';
   }
   var pages = null;
@@ -280,7 +280,7 @@
   function csv() {
     var S = sorted(sums()), q = function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     var rows = [['Athlete', 'Benchmark', 'Rounds', 'Last round', 'Last score', 'SG per round (' + periodName(ST.period) + ')', 'Score trend', 'Attention']].concat(S.map(function (s) {
-      return [s.name, s.blName, s.n, s.last ? new Date(s.last.t).toISOString().slice(0, 10) : '', s.last ? s.last.strokes : '', s.sg == null ? '' : s.sg.toFixed(2), s.trend.dir ? (s.trend.dir === 'better' ? 'down ' : s.trend.dir === 'worse' ? 'up ' : 'flat ') + s.trend.diff.toFixed(1) : '', s.flags.map(function (f) { return f.text; }).join('; ')]; }));
+      return [s.name, s.blName, s.n, s.last ? new Date(s.last.t).toISOString().slice(0, 10) : '', s.last ? s.last.strokes : '', s.sg == null ? '' : s.sg.toFixed(2), s.trend.dir ? CALC.trendWord(s.trend) + ' ' + CALC.trendRate(s.trend) : '', s.flags.map(function (f) { return f.text; }).join('; ')]; }));
     var blob = new Blob([rows.map(function (r) { return r.map(q).join(','); }).join('\n')], { type: 'text/csv' }), a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'strokewise-athletes-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
