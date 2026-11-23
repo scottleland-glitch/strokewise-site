@@ -72,6 +72,7 @@
   // v253 (Scott): score trend = a trendline through the last 10 full rounds (was last-5 avg vs the 5 before, which flipped
   // when a round slid from one side to the other). Least-squares line, rounds evenly spaced.
   // Strokes per round: + = scores going up (worse), - = going down (better). Within ±0.25 a round it is steady.
+  var LAST_LOSS = 1; // v254: a skill costing 1+ stroke in the latest round is flagged amber, 2+ red
   var TREND_N = 10, TREND_MIN = 6, TREND_FLAT = 0.25, TREND_ALERT = 0.5;
   function trendOf(P) {
     var full = P.rows.filter(function (r) { return r.full; }).map(function (r) { return r.strokes; });
@@ -107,6 +108,10 @@
     // a skill clearly below the athlete's usual (their 20 rounds before this window; at least 6 of them, so a thin history can't trigger it)
     if (S3.prevCats && S3.prev.rounds >= 6 && S3.cur.rounds >= 4) S3.cats.forEach(function (c, i) { var p = S3.prevCats[i];
       if (c.solid && p.value != null && (p.solid || (S3.prev.usual && p.n >= 4)) && c.value - p.value <= -0.75) { named[c.k] = 1; F.push({ tone: 'red', kind: 'skill', text: c.name + ' ' + fmtSG(c.value - p.value) + ' vs usual', to: 'skill/' + c.k }); } });
+    // v254 (Scott): the latest round's biggest strokes-gained loss (per 18), so the coach sees what drove a score – shown for 7 days
+    if (last && now - last.t <= 7 * DAY) { var k0 = null, v0 = 0, f18 = 18 / last.holes;
+      CATS.forEach(function (c) { var x = last.cats[c.k]; if (x && x.n && x.sg * f18 < v0) { v0 = x.sg * f18; k0 = c; } });
+      if (k0 && v0 <= -LAST_LOSS && !named[k0.k]) F.push({ tone: v0 <= -2 * LAST_LOSS ? 'red' : 'amber', kind: 'lastround', text: 'Last round: ' + k0.name + ' ' + fmtSG(v0) + ' strokes gained (biggest loss)', to: 'round/' + last.id }); }
     var practiceOn = !(A.profile && A.profile.mode === 'stats');
     try {
       var TD = X.TR.build(rows.map(function (r) { return r.round; }), practiceOn ? X.MG.validPractice(A.practice || []) : [], X.SG, X.MG, { bl: P.bl, weeks: 26, tests: [], roundsOnly: !practiceOn, now: now });
