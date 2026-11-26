@@ -392,7 +392,7 @@
       [].forEach.call(root2.querySelectorAll('.appui [data-act]'), function (el) { if (!ALLOWED[el.getAttribute('data-act')]) el.setAttribute('data-na', '1'); });
     }
     var NAV = { goHole: 1, setbl: 1 }, ALLOWED = {};
-    ('info mgperiod mgknow trzoom trwk strange stpick stpickev stpickclr stround stcmp stcat stpmb stcur stpt blminest blminehist tkknow stx map mapscope mapclose pinseg proxb proxlie clubsel heat pmg puttn cmpn cmpkind cmpgrp cmpside bzscope replay rpgreen rpgreenback rpghole rpclose wkoff wkspan wkfull wkclose prfull prclose plweek plbench sgtoggle prplan sgtrow sgttrend sgthub setbl goHole wkday wkdayclose prday prmoredays dspyd dsppin dspplay dspall dspmode dspfac dsptip dspclub dspryd dspsrc dsprplay dspaim dsprpin').split(' ').forEach(function (k) { ALLOWED[k] = 1; });
+    ('info mgperiod mgknow trzoom trwk strange stpick stpickev stpickclr stround stcmp stcat stpmb stcur stpt blminest blminehist tkknow stx map mapscope mapclose pinseg proxb proxlie clubsel heat pmg puttn cmpn cmpkind cmpgrp cmpside bzscope replay rpgreen rpgreenback rpghole rpclose wkoff wkspan wkfull wkclose prfull prclose plweek plbench sgtoggle prplan sgtrow sgttrend sgthub setbl goHole wkday wkdayclose prday prmoredays dspyd dsppin dspplay dspall dspmode dspfac dsptip dspclub dspryd dspsrc dsprplay dspaim dsprpin dsprgrp trinfo trfs trfsrot').split(' ').forEach(function (k) { ALLOWED[k] = 1; });
     function renderWeb(uid, parts, query) { var r = render(uid, parts, query); if (r && r.html) r.html = webText(r.html); return r; }
     return { render: renderWeb, overlay: overlay, after: after, openDay: openDay, dspAct: dspAct, RS: RS, PS: PS, SHOTS: SHOTS, withAV: withAV, ALLOWED: ALLOWED, H: H };
   };
