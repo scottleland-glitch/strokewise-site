@@ -155,6 +155,13 @@ const checks = []; const ok = (name, cond, extra) => { checks.push([name, !!cond
   { var trTxt = await p.innerText('.appui.trends'), trCards = await p.$$('.appui.trends .trcard2'); ok('Trends v218: one dashed line + a Why line under each chart, no range band or confidence', (await p.$$('.appui.trends path.trmid')).length >= 1 && (await p.$$('.appui.trends .trwhy')).length >= 1 && !(await p.$('.appui.trends .trband, .appui.trends .trconf')) && !/confidence|likely range|with more|with less/i.test(trTxt) && /Why:/.test(trTxt) && !/slip/i.test(trTxt), trCards.length + ' cards'); }
   await p.click('.apphost [data-act=trzoom] >> nth=1').catch(() => {}); await p.waitForTimeout(300);
   await p.screenshot({ path: OUT + '/09c-trends-1440x900.png' });
+  { // v260: chart notes behind (i); a click on a chart opens it full screen (not turned on a wide screen); Esc / ✕ closes
+    const hid = !(await p.isVisible('.appui.trends #trlede')); await p.click('.appui.trends #trinfobtn'); const shown = await p.isVisible('.appui.trends #trlede'); await p.click('.appui.trends #trinfobtn');
+    const tp = await p.$('.appui.trends .trcard2[data-k="total"] .trtap'), bb = await tp.boundingBox(); await p.mouse.click(bb.x + 8, bb.y + 8); await p.waitForSelector('#trfs');
+    const fr = await p.evaluate(() => { const r = document.querySelector('#trfs').getBoundingClientRect(); return [r.left, r.top, r.width, r.height, innerWidth, innerHeight]; }), rot = !!(await p.$('#trfs.rot'));
+    await p.waitForTimeout(400); await p.screenshot({ path: OUT + '/09d-trends-fullscreen.png' }); await p.keyboard.press('Escape'); await p.waitForTimeout(200); const esc = !(await p.$('#trfs'));
+    await p.mouse.click(bb.x + 8, bb.y + 8); await p.waitForSelector('#trfs'); await p.click('#trfsx'); const x = !(await p.$('#trfs'));
+    ok('Trends v260: notes behind (i), chart full screen (' + fr.join(',') + '), Esc and ✕ close', hid && shown && fr[0] === 0 && fr[1] === 0 && fr[2] === fr[4] && fr[3] === fr[5] && !rot && esc && x); }
   await p.goto(BASE + '#/a/' + encodeURIComponent(J.uid) + '/compare'); await p.waitForSelector('.appui.compare'); ok('best vs worst rounds page renders', /Best|Worst/.test(await p.textContent('.appui.compare')));
 
   // ---------- Practice ----------
