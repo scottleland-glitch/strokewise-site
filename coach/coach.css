@@ -259,3 +259,26 @@ h4.stn { font: 700 15px Inter, sans-serif; margin: 16px 0 6px; }
 @media (max-width: 760px) { .appui.ap.prc { padding: 4px; border-radius: 16px; } }
 .appui.plan #plintro { display: none; } /* "tap Log" – the plan is read-only here */
 .prahead { margin: 0 0 18px; } .appui.ap.prc.ahead .wacard { margin: 0 !important; }
+
+/* v259 (Scott): a Dispersion picture plays full screen after a tap; swipe down (or ✕ / Esc) to close.
+   The picture's box is moved to <body> while full screen, so these rules are not scoped to the page. */
+body.dspfsopen { overflow: hidden; }
+.dspfstop, .dspfsinfo, .dspfshint { display: none; }
+.dspfs { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 2000; display: flex; flex-direction: column; margin: 0; border-radius: 0; overflow: hidden; background: #1d4a23;
+  touch-action: none; overscroll-behavior: contain; -webkit-user-select: none; user-select: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); animation: dspfsin .24s ease-out; }
+@keyframes dspfsin { from { transform: translateY(48px); opacity: 0; } to { transform: none; opacity: 1; } }
+.dspfs .dspfstop { display: flex; align-items: center; gap: 10px; position: relative; flex: none; padding: 12px 12px 8px 16px; color: #fff; }
+.dspfs .dspfsgrab { position: absolute; left: 50%; top: 5px; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: rgba(255, 255, 255, .45); }
+.dspfs .dspfsttl { flex: 1; min-width: 0; font: 600 16px/1.25 -apple-system, system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dspfs .dspfsx { flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .18); color: #fff; font-size: 18px; line-height: 38px; text-align: center; cursor: pointer; }
+.dspfs canvas { display: block; flex: 1 1 0; min-height: 0; width: 100% !important; }
+.dspfs .dspcap { display: none; }
+.dspfs .dspfsinfo { display: block; flex: none; padding: 10px 16px 2px; color: #fff; font: 400 14px/1.45 -apple-system, system-ui, sans-serif; }
+.dspfs .dspfsinfo .dspbest, .dspfs .dspfsinfo .dspnote { margin: 0; color: #fff; font-size: 14px; }
+.dspfs .dspfsinfo b { font-weight: 600; }
+.dspfs .dspfsinfo em { font-style: normal; font-weight: 600; color: #8fe39a; }
+.dspfs .dspfsinfo em.bad { color: #ff9aa2; }
+.dspfs .dspfsinfo .muted { color: rgba(255, 255, 255, .72); }
+.dspfs .dspfshint { display: block; flex: none; margin: 4px 0 10px; text-align: center; color: rgba(255, 255, 255, .6); font: 400 12px -apple-system, system-ui, sans-serif; }
+@media (hover: hover) and (pointer: fine) { .dspfs .dspfshint::after { content: ' · or press Esc'; } }
