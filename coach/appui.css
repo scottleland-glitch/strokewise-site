@@ -2887,7 +2887,8 @@
 /* stat rows that open a map in one tap */
 .appui .stxgo .stxgo-c { font-style: normal; font-size: 20px; line-height: 1; color: #6b7b88; margin-left: 8px; }
 /* replay: pinned header, the hole fits the screen */
-.appui #replayview .rpsticky { position: sticky; top: 0; z-index: 3; margin: calc(-1 * (env(safe-area-inset-top) + 8px)) -12px 8px; padding: calc(env(safe-area-inset-top) + 8px) 12px 8px; background: rgba(225, 238, 232, .94); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.appui #replayview { padding-top: 0; } /* v265: the pinned header carries the notch space (a negative margin hid the ▶ Play row on an iPhone) */
+.appui #replayview .rpsticky { position: sticky; top: 0; z-index: 3; margin: 0 -12px 8px; padding: calc(env(safe-area-inset-top) + 8px) 12px 8px; background: rgba(225, 238, 232, .94); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 .appui #replayview #replaymap { max-height: calc(100vh - env(safe-area-inset-top) - 150px - var(--rbh, 0px)); width: auto; max-width: 100%; margin: 0 auto; }
 .appui .rsmenu .rsmi .rsic { flex: 0 0 36px; width: 36px; height: 36px; padding: 7px; border-radius: 11px; background: #1f5d3a; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; box-sizing: border-box; }
 .appui .rsmenu #storybtn .rsic { background: linear-gradient(135deg, #d8a23a, #c4553e); }
