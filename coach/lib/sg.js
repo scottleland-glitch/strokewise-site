@@ -415,7 +415,7 @@
       out.push({
         n: i + 1, start: start, end: end, pen: pen, penStrokes: penStrokes,
         side: s.side || dirSide(hd), dir: hd, ob: !!s.ob, retee: !!s.retee, loc: s.loc || (pen === 'ob' ? 'ob' : s.lie), hk: s.hk, eStart: eStart, eEnd: eEnd, sg: sg,
-        cat: cat, bucket: bucket, hit: hit, club: clubOf(raw[i]), ang: ang, fromAng: prevAng,
+        cat: cat, bucket: bucket, hit: hit, club: clubOf(raw[i]) || (start.lie === 'green' ? 'Putter' : '') /* v266 (Scott): a shot from the green is a putt – Putter unless another club was picked */, ang: ang, fromAng: prevAng,
         rd: start.lie === 'green' && raw[i] && /^(up|flat|down)-(l|s|r)$/.test(raw[i].rd) ? raw[i].rd : '' // v202: the putt's read (slope-break), '' = not entered
       });
       if (pen !== 'ob' && end.lie !== 'holed') prevAng = aroundPin ? ang : 270;
