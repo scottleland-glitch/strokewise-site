@@ -76,7 +76,10 @@
       if (i < 0) return empty('That round isn’t in this athlete’s shared rounds. <a href="' + H(uid, 'rounds') + '">Back to rounds</a>');
       mark(uid, id);
       var row = P.rows[i], r = row.round, S = SG.summarize(r, bl), older = P.rows[i + 1], newer = P.rows[i - 1], B = SG.baseline(bl);
-      var h = back(uid, 'rounds', 'All rounds') + pager(older ? { href: H(uid, 'round/' + encodeURIComponent(older.id)), label: 'Older · ' + fd(older.t) } : null, newer ? { href: H(uid, 'round/' + encodeURIComponent(newer.id)), label: 'Newer · ' + fd(newer.t) } : null, 'Round ' + (P.rows.length - i) + ' of ' + P.rows.length);
+      // v268 (Scott): All rounds is the big, easy-to-find button; older / newer are small pills either side of "Round 9 of 11"
+      var nav = function (o, older) { return o ? '<a class="btn sec xs rnstep" id="' + (older ? 'rnolder' : 'rnnewer') + '" href="' + H(uid, 'round/' + encodeURIComponent(o.id)) + '" aria-label="' + (older ? 'Older' : 'Newer') + ' round, ' + fd(o.t) + '">' + (older ? '‹ ' + fd(o.t) : fd(o.t) + ' ›') + '</a>' : '<span class="rnstep"></span>'; };
+      var h = '<div class="roundnav"><a class="btn pri allrounds" id="allrounds" href="' + H(uid, 'rounds') + '">‹ All rounds</a><div class="rnpager">' + nav(older, true) +
+        '<span class="mid">Round ' + (P.rows.length - i) + ' of ' + P.rows.length + '</span>' + nav(newer, false) + '</div></div>';
       var yds = 0; r.holes.forEach(function (x) { yds += SG.holeYards(x) || 0; });
       h += '<div class="rhead"><div><h2>' + E(row.course) + '</h2><div class="sub">' + fd(row.t, true) + ' · ' + row.holes + ' holes ' + plays(row) + newTag(uid, 'rounds', id) + '</div></div>' + benchSelect(uid, P) + '</div>';
       h += '<div class="tilesm">' + tile('Score', '<b>' + S.strokes + '</b> <small>' + (row.full ? par(row.toPar) : row.holes + ' holes') + '</small>', yds ? yds + ' yd' : '') +
@@ -104,17 +107,18 @@
       S.holes.forEach(function (hh) { if (!hh.done) return; hh.shots.forEach(function (sh) { if (sh.layup) return; for (var i = 0; i < MG.SPOKES.length; i++) if (MG.SPOKES[i].test(sh)) { acc[MG.SPOKES[i].k].n++; acc[MG.SPOKES[i].k].sg += sh.sg; break; } }); });
       var to = row.t, from = to - 30 * DAY, logs = MG.validPractice(A.practice || []).filter(function (e) { var t = Date.parse(e.date); return t >= from && t < to; });
       var rows = CATS.map(function (C) { var n = 0, sg = 0, min = 0; C.spokes.forEach(function (k) { if (acc[k]) { n += acc[k].n; sg += acc[k].sg; } });
-        logs.forEach(function (e) { if (C.spokes.indexOf(e.spoke) >= 0) min += e.min; }); return { C: C, n: n, sg: n ? sg : null, lost: n && sg < 0 ? -sg : 0, min: min }; });
-      var L = rows.reduce(function (t, x) { return t + x.lost; }, 0), M = rows.reduce(function (t, x) { return t + x.min; }, 0);
+        logs.forEach(function (e) { if (C.spokes.indexOf(e.spoke) >= 0) min += e.min; }); return { C: C, n: n, sg: n ? sg : null, lost: n && sg < 0 ? -sg : 0, won: n && sg > 0 ? sg : 0, min: min }; });
+      var L = rows.reduce(function (t, x) { return t + x.lost; }, 0), Gn = rows.reduce(function (t, x) { return t + x.won; }, 0), M = rows.reduce(function (t, x) { return t + x.min; }, 0);
       var worst = rows.filter(function (x) { return x.lost > 0; }).sort(function (a, b) { return b.lost - a.lost; })[0];
       var pc = function (v, tot) { return tot ? Math.round(v / tot * 100) : 0; };
       var lede = !M ? 'No practice logged in the 30 days before this round.' : worst ? 'Most strokes lost: ' + worst.C.name.toLowerCase() + ' (' + pc(worst.lost, L) + '% of the strokes lost, ' + pc(worst.min, M) + '% of the practice).' : 'No skill lost strokes against the benchmark this round.';
       return '<div class="card rvp" id="rvp"><h3>Strokes gained vs practice</h3><p class="sub">This round by skill, next to the practice logged in the 30 days before it (' + fd(from) + ' – ' + fd(to - DAY) + ' · ' + (M ? X.hm(M) : 'none') + ' in ' + logs.length + ' session' + (logs.length === 1 ? '' : 's') + '). ' + E(lede) + '</p>' +
         '<div class="rvprows">' + rows.map(function (x) {
           return '<div class="rvprow"><b>' + x.C.name + '</b><span class="rvpsg">' + (x.sg == null ? '<span class="muted">–</span>' : sgv(x.sg)) + '</span>' +
-            '<i class="rvpbar ls" title="Share of strokes lost"><u style="width:' + pc(x.lost, L) + '%"></u></i><em>' + pc(x.lost, L) + '%</em>' +
+            (x.won ? '<i class="rvpbar gn" title="Share of the strokes gained"><u style="width:' + pc(x.won, Gn) + '%"></u></i><em class="gn">' + pc(x.won, Gn) + '%</em>' // v268 (Scott): gained in green, lost in red
+              : '<i class="rvpbar ls" title="Share of the strokes lost"><u style="width:' + pc(x.lost, L) + '%"></u></i><em' + (x.lost ? ' class="ls"' : '') + '>' + pc(x.lost, L) + '%</em>') +
             '<i class="rvpbar pt" title="Share of practice time"><u style="width:' + pc(x.min, M) + '%"></u></i><em>' + (x.min ? X.hm(x.min) : '0m') + '</em></div>'; }).join('') + '</div>' +
-        '<div class="rvpkey"><span><i class="ls"></i>Share of strokes lost this round</span><span><i class="pt"></i>Practice in the 30 days before</span></div></div>';
+        '<div class="rvpkey"><span><i class="gn"></i>Share of the strokes gained</span><span><i class="ls"></i>Share of the strokes lost (this round)</span><span><i class="pt"></i>Practice in the 30 days before</span></div></div>';
     }
     function puttBrk(r) { var x = AV.html.puttBrk(r); return x ? panel(x, 'pb') : ''; }
     function sgTable(S, uid, row) {

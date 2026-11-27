@@ -352,3 +352,12 @@ html body .clubtab tr.p3 td:last-child { box-shadow: inset -2px 0 0 #d0213a; }
 html body .clubtab tr.p3top td { border-top: 2px solid #d0213a; }
 html body .clubtab tr.p3bot td { border-bottom: 2px solid #d0213a; }
 html body .clubtab .p3tag { display: block; font-size: 10px; font-weight: 600; color: #b3121f; line-height: 1.1; white-space: nowrap; }
+
+/* v268 (Scott): round page – All rounds is the big button; older / newer are small pills; strokes gained vs practice shows gained in green */
+.roundnav { display: flex; flex-direction: column; gap: 10px; margin: 0 0 16px; }
+.roundnav .allrounds { align-self: flex-start; padding: 12px 22px; font-size: 16px; font-weight: 700; }
+.rnpager { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.rnpager .rnstep:first-child { justify-self: start; } .rnpager .rnstep:last-child { justify-self: end; }
+.rnpager .mid { font-size: 13.5px; color: var(--soft); font-weight: 600; white-space: nowrap; }
+.btn.xs { padding: 6px 12px; font-size: 13px; font-weight: 600; border-width: 1.2px; }
+.rvpbar.gn u, .rvpkey .gn { background: #3f8f4f; } .rvprow em.gn { color: #2f7a3e; } .rvprow em.ls { color: #b5523f; }

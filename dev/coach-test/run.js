@@ -120,7 +120,12 @@ const checks = []; const ok = (name, cond, extra) => { checks.push([name, !!cond
   // benchmark select
   const sg0 = await p.textContent('.tilesm .tile:nth-child(2) .v'); await p.selectOption('select[data-sel=bench]', 'pga'); await p.waitForTimeout(400); const sg1 = await p.textContent('.tilesm .tile:nth-child(2) .v'); ok('benchmark selector recalculates the round', sg0 !== sg1, sg0 + ' → ' + sg1); await p.selectOption('select[data-sel=bench]', J.spec.bench);
   // prev / next
-  const idNow = (await hashOf()).split('/round/')[1]; await p.click('.pager a:has-text("Older")'); await p.waitForTimeout(400); ok('older round navigation', (await hashOf()).split('/round/')[1] !== idNow); await p.click('.pager a:has-text("Newer")'); await p.waitForTimeout(400); ok('newer round navigation returns', (await hashOf()).split('/round/')[1] === idNow);
+  const idNow = (await hashOf()).split('/round/')[1]; await p.click('#rnolder'); await p.waitForTimeout(400); ok('older round navigation', (await hashOf()).split('/round/')[1] !== idNow); await p.click('#rnnewer'); await p.waitForTimeout(400); ok('newer round navigation returns', (await hashOf()).split('/round/')[1] === idNow);
+  { // v268: All rounds is the big button, older / newer small pills; strokes gained vs practice has gained bars in green and lost in red
+    const ar = await p.$eval('#allrounds', (e) => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return [r.height, parseFloat(cs.fontSize), e.textContent]; }), st = await p.$eval('.rnstep[href]', (e) => [e.getBoundingClientRect().height, parseFloat(getComputedStyle(e).fontSize)]);
+    ok('round page: All rounds bigger than the older / newer pills', ar[0] > st[0] && ar[1] > st[1] && /All rounds/.test(ar[2]), JSON.stringify([ar, st]));
+    const bars = await p.$$eval('#rvp .rvprow', (rs) => rs.map((r) => [r.querySelector('.rvpsg').textContent.trim(), r.querySelector('.rvpbar').className]));
+    ok('strokes gained vs practice: green bars for gained, red for lost', bars.length && bars.every((b) => !/^\+/.test(b[0]) || /gn/.test(b[1])) && bars.every((b) => !/^[−-]\d/.test(b[0]) || /ls/.test(b[1])), JSON.stringify(bars)); }
   // scorecard → hole page
   await p.click('.scard tr.shole td:nth-child(4) button'); await p.waitForSelector('.rt.shots'); ok('clicking a hole on the scorecard opens the hole page', /\/hole\/3$/.test(await hashOf()) && /Hole 3/.test(await body()));
   ok('hole page: shots with club, miss, putt read, SG', ['Club', 'Miss', 'Putt read', 'SG'].every((x) => true) && (await p.$$('.rt.shots tbody tr.shot')).length >= 2);
