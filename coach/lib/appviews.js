@@ -775,7 +775,8 @@
     if (nr) { W.rows = W.rows.map(function (r) { return { k: r.k, name: r.name, done: r.done, tour: r.tour, target: 0 }; }); dots = []; } // v215: just what was done
     var mx = Math.max.apply(null, W.rows.map(function (r) { return Math.max(r.target, r.done); }).concat([10]));
     var nav = '<span class="wknav"><button class="txt" data-act="wkoff" data-k="1" aria-label="Earlier week"' + (off >= 25 ? ' disabled' : '') + '>‹</button><b>' + esc(lab) + '</b><button class="txt" data-act="wkoff" data-k="-1" aria-label="Later week"' + (off ? '' : ' disabled') + '>›</button></span>';
-    var legend = prLegend(L.some(function (e) { return e.kind === 'tour'; }));
+    var r0 = pgRange(L, view.wkSpan || 0).start, tourShown = L.some(function (e) { if (e.kind !== 'tour') return false; var t = Date.parse(e.date); return (t >= W.start && t <= W.end) || pgIso(t) >= pgAddD(r0, -30); }); // v269: the key only when a chart shows tournament credit
+    var legend = prLegend(tourShown);
     var p1 = '<div class="wkpage" data-p="0"><div class="wkdots" aria-hidden="true">' + dots.join('') + '</div><div class="wkbars">';
     W.rows.forEach(function (r) { var got = !nr && r.done >= r.target;
       // v240 (Scott): no black target marks – the bar is the target (its length), filling up with what's done
@@ -788,7 +789,7 @@
     // v237: Fit (default) / 30 / 60 / 90 days
     var spans = '<div class="prchips wkspans" role="group" aria-label="How far back">' + [[0, 'Fit'], [30, '30d'], [60, '60d'], [90, '90d']].map(function (q) { var on = (view.wkSpan || 0) === q[0];
       return '<button class="prchip' + (on ? ' on' : '') + '" data-act="wkspan" data-v="' + q[0] + '" aria-pressed="' + on + '"' + (q[0] ? ' aria-label="Last ' + q[0] + ' days"' : ' aria-label="Fit to your practice"') + '>' + q[1] + '</button>'; }).join('') + '</div>';
-    var p3 = '<div class="wkpage" data-p="2"><p class="wkpt">' + esc(R3.label) + ' · fading average</p>' + spans + monthsSVG(L, who, P, !!view.wkFull, nr, W.target, R3) + legend + '<p class="plintro wknote">Recent days count more · 🏆 tournament day' + (L.some(function (e) { return e.kind === 'tour'; }) ? ' (counts 2.5 h)' : '') + ' · <span class="leskey"></span> lesson' + (nr ? '' : ' · dashed = weekly target') + '</p></div>';
+    var p3 = '<div class="wkpage" data-p="2"><p class="wkpt">' + esc(R3.label) + ' · fading average</p>' + spans + monthsSVG(L, who, P, !!view.wkFull, nr, W.target, R3) + legend + '<p class="plintro wknote">Recent days count more · 🏆 tournament day' + (tourShown ? ' (counts 2.5 h)' : '') + ' · <span class="leskey"></span> lesson' + (nr ? '' : ' · dashed = weekly target') + '</p></div>';
     var full = !!view.wkFull; // v207 (Scott): tap the card → full screen; swipe down, ✕ or Back to close; left / right still swipe
     return '<div class="card frost weekcard' + (full ? ' isfull' : '') + '" id="weekcard"' + (full ? ' role="dialog" aria-modal="true" aria-label="This week, full screen"' : ' data-act="wkfull" role="button" tabindex="0" aria-label="This week – tap for full screen"') + '>' +
       (full ? '<div class="wkgrab" aria-hidden="true"></div><button class="wkx" data-act="wkclose" id="wkclose" aria-label="Close">✕</button>' : '') + '<div class="planhead">' + nav + '<small id="wktot">' + hmS(W.done) + (nr ? ' logged' : ' of ' + hmS(W.target)) + '</small></div>' +
