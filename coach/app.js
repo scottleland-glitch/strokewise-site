@@ -297,6 +297,8 @@
     var uid = curUid(), rid = curRound(); if (!uid || !pages) return;
     ev.preventDefault();
     if (el.hasAttribute('data-na') || el.disabled) return;
+    // v278: ✕ Close on a hole replay that was opened from a ball on Dispersion goes back to Dispersion (browser Back), not to the round
+    if (act === 'rpclose' && pages.fromDsp && pages.fromDsp()) { window.APPVIEWS.view.replay = null; window.APPVIEWS.view.rpGreen = false; history.back(); return; }
     if (act === 'goHole') { if (rid) location.hash = H(uid, 'round/' + encodeURIComponent(rid) + '/hole/' + (+el.getAttribute('data-i') + 1)); return; }
     if (act === 'setbl') { ST.bl[uid] = v; rerender(); return; }
     if (act === 'sgtview') { location.hash = H(uid, 'test/' + encodeURIComponent(v)); return; }
