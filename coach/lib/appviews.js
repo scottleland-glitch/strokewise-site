@@ -155,12 +155,27 @@
       two: first.filter(function (p) { return p.holePutts === 2; }).length, three: SG.threePutts(S.puttList).three,
       ppg: girH.length ? girH.reduce(function (t, a) { return t + a.putts; }, 0) / girH.length : null, dist: dist, parN: parN,
       // v125: SG by first-putt distance / short-game lie and distance (SG.statBuckets), drives for the box chart, approach proximity
-      b: SG.statBuckets(S), drv: S.teeMap.filter(function (m) { return !m.layup && m.kind !== 'ob' && !m.pen && m.hit != null && isFinite(m.hit) && m.hit > 0; }).map(function (m) { return { hit: Number(m.hit), club: m.club || '' }; }),
+      b: stBuckets(S), drv: S.teeMap.filter(function (m) { return !m.layup && m.kind !== 'ob' && !m.pen && m.hit != null && isFinite(m.hit) && m.hit > 0; }).map(function (m) { return { hit: Number(m.hit), club: m.club || '' }; }),
       fp: S.puttList.filter(SG.firstPutt).map(function (p) { return { n: 1, ft: p.ft, made: p.made, endDir: p.endDir || '', endFt: p.endFt, endLie: p.endLie }; }), // v126 putt misses; v127 + 2nd putt length
       prox: stProx(S.proxList), proxN: S.proxList.filter(function (m) { return m.proxFt != null && SG.inBucket('all', m.from); }).length,
       unf: S.holesDone < r.holes.length };
   }
   function stProx(L) { var a = L.filter(function (m) { return m.proxFt != null && SG.inBucket('all', m.from); }); return a.length ? a.reduce(function (t, m) { return t + m.proxFt; }, 0) / a.length : null; }
+  // v275 (Scott: "see wedges separately"): Approach split by where the shot started – 30–60 yd (over 30, under 60), 60–100, 100+.
+  // sg / n = every approach shot from there (par-3 tee shots in, layups out), so the three add up to APP;
+  // gn / gh = finished holes whose regulation shot started there / greens hit; pn / pt = proximity after that shot (ft; OB left out).
+  var ST_AB = [{ id: 'w30', name: '30–60 yd', rng: 'over 30 and under 60 yd', color: '#5cb96c' }, { id: 'w60', name: '60–100 yd', rng: '60 yd up to under 100 yd', color: '#2e9d4f' },
+    { id: 'o100', name: '100+ yd', rng: '100 yd or more', color: '#1d6b38' }];
+  function stAbOf(yd) { yd = Number(yd); return !(yd > SG.SHORT_MAX_YD) ? null : yd < 60 ? 'w30' : yd < 100 ? 'w60' : 'o100'; }
+  function stApprBands(S) {
+    var o = {}; ST_AB.forEach(function (b) { o[b.id] = { n: 0, sg: 0, gn: 0, gh: 0, pn: 0, pt: 0 }; });
+    (S.holes || []).forEach(function (a) { if (!a || !a.done || a.off || a.scoreOnly || !a.shots) return;
+      a.shots.forEach(function (r) { if (r.layup || r.cat !== 'approach') return; var B = o[stAbOf(r.start.dist)]; if (B) { B.n++; B.sg += r.sg; } }); });
+    (S.proxList || []).forEach(function (m) { if (m.fromLie === 'green') return; var B = o[stAbOf(m.from)]; if (!B) return;
+      B.gn++; if (m.gir) B.gh++; if (m.proxFt != null) { B.pn++; B.pt += m.proxFt; } });
+    return o;
+  }
+  function stBuckets(S) { var b = SG.statBuckets(S); b.ab = stApprBands(S); return b; }
   function statsPlayerInfo() {
     var P = playersIn(), names = Object.keys(P).sort(), noName = savedRounds().some(function (r) { return !r.player; }), multi = names.length + (noName && names.length ? 1 : 0) > 1;
     if (view.stPlayer === undefined) view.stPlayer = view.histPlayer || (multi && P[playerName()] ? playerName() : null); // default: the Rounds filter, else this phone's player
@@ -253,9 +268,14 @@
     if (sel != null && pts[sel]) { var p = pts[sel];
       tip = '<div class="sttip" id="' + id + 'tip"><div class="sttiph">' + esc(stDate(p.date)) + ' · ' + esc(p.course) + '<button class="sttipx" data-act="stpt" data-c="' + id + '" data-i="' + sel + '" aria-label="Close">×</button></div>' +
         '<div class="sttipm">' + esc(o.short) + ' ' + fmt(val(p)) + (o.nOf ? ' (n = ' + (o.nOf(p) || 0) + ')' : '') + ' · Score ' + p.score + ' (' + toPar(p.toPar) + ') · ' + p.putts + ' putts</div></div>'; }
-    var key = mode === 'sel' ? 'Big dot = this round; tap a grey dot to pick another.' + (cmp ? ' Grey dashed = all-rounds average.' : '')
-      : 'Dashed = average' + (mode === '5' ? ' of the last 5' : mode === 'pick' ? ' of the selected rounds' : '') + '.' + (cmp ? (mode === 'pick' ? ' Grey dashed = all-rounds average.' : ' Grey = older rounds; grey dashed = all-rounds average.') : '');
-    return '<div class="stcard stgraph" id="st-' + id + '"><div class="sth"><span>' + esc(o.title) + '</span><span class="stv" id="' + id + 'val">' + head + '</span></div>' + s + nLine + few + tip +
+    // v275 (Scott: "hard to tell the grey dashed line from the regular dashed line"): the 0 line is solid now, the all-rounds average is a
+    // black dotted line, and with Compare a small legend under the chart names each line
+    var key = mode === 'sel' ? 'Big dot = this round; tap a grey dot to pick another.' + (cmp ? ' Black dotted = all-rounds average.' : '')
+      : 'Coloured dashed = average' + (mode === '5' ? ' of the last 5' : mode === 'pick' ? ' of the selected rounds' : '') + '.' + (cmp ? (mode === 'pick' ? ' Black dotted = all-rounds average.' : ' Grey = older rounds; black dotted = all-rounds average.') : '');
+    var sw = function (cls, col, txt) { return '<span><svg viewBox="0 0 24 8" aria-hidden="true"><line class="' + cls + '" x1="1" x2="23" y1="4" y2="4"' + (col ? ' stroke="' + col + '"' : '') + '/></svg>' + txt + '</span>'; };
+    var leg = cmp ? '<p class="stleg" id="' + id + 'leg">' + (mode !== 'sel' && avgSel != null ? sw('stavg', o.color, mode === '5' ? 'Last 5 avg' : mode === 'pick' ? 'Selected avg' : 'Avg') : '') +
+      (mode === '5' && solid0 > 0 ? sw('stline stlight', '', 'Older rounds') : '') + (avgAll != null ? sw('stavgall', '', 'All-rounds avg') : '') + '</p>' : '';
+    return '<div class="stcard stgraph" id="st-' + id + '"><div class="sth"><span>' + esc(o.title) + '</span><span class="stv" id="' + id + 'val">' + head + '</span></div>' + s + leg + nLine + few + tip +
       (o.helpIn && nLine ? '<p class="help stnote" id="' + id + 'help" data-infoin="' + id + 'n">' : '<p class="stnote">') + esc(o.help) + ' ' + key + '</p></div>';
   }
   function stDist(par, D) {
@@ -428,9 +448,24 @@
           '<rect class="stbbar ' + (r.v < 0 ? 'neg' : 'pos') + '" x="' + L + '" y="' + (y + 5) + '" width="' + w + '" height="14" rx="7"/><text class="stbv" x="' + W + '" y="' + (y + 17) + '" text-anchor="end">' + fmtSG(r.v || 0) + '</text></g>'; }).join('') + '</svg>';
       return '<div class="stcard stgraph stbrk" id="st-' + id + '"><div class="sth"><span>' + esc(title) + '</span><span class="stv">Total <em>' + fmtSG(T) + '</em></span></div>' + svg +
         '<p class="stnote">Strokes gained (+) or lost (-) per round, by ' + (grp === 'putt' ? '1st putt distance' : 'shot distance') + '. The bars add up to the total' + (worst ? '. Biggest leak: ' + esc(worst.name) + ' (' + fmtSG(worst.v) + ' per round).' : '.') + '</p></div>'; };
+    // v275: Approach distance chips – All (the graphs as before + where the strokes go) or one distance group (its own SG, greens hit, proximity)
+    var abSel = ST_AB.filter(function (b) { return b.id === view.stAppB; })[0] || null;
+    var abSeg = function () { return '<div class="stseg stabseg" id="stabseg" role="group" aria-label="Approach distance">' + [{ id: '', name: 'All' }].concat(ST_AB).map(function (b) {
+        var s = (abSel ? abSel.id : '') === b.id; return '<button class="' + (s ? 'sel' : '') + '" data-act="stappb" data-v="' + b.id + '" aria-pressed="' + s + '">' + b.name.replace(' yd', '') + '</button>'; }).join('') + '</div>' +
+      '<p class="stnote stabnote" id="stabnote">' + (abSel ? 'Approach shots from ' + abSel.rng + ' only.' : 'All approach shots. Tap a distance (yards) to see your wedges apart.') + '</p>'; };
+    var abT = function (b) { var g = function (p) { return p.b.ab[b.id]; }, sum = function (L, k) { return L.reduce(function (t, p) { return t + g(p)[k]; }, 0); };
+      return stTrend('ab' + b.id, D, function (p) { return g(p).sg; }, { title: 'Approach ' + b.name + ' (SG)', short: 'SG ' + b.name, color: b.color, minSpan: 0.4, unit: 'shots', nOf: function (p) { return g(p).n; },
+          help: 'Every approach shot that started ' + b.rng + ' from the hole (par-3 tee shots count, par-4/5 tee shots and layups do not), strokes gained added up per round (a round with none = 0). The three distance groups add up to the Approach total.' }) +
+        stTrend('abg' + b.id, D, function (p) { var x = g(p); return x.gn ? 100 * x.gh / x.gn : null; }, { title: 'Greens hit from ' + b.name, short: 'Greens hit', color: b.color, pct: true, unit: 'holes',
+          help: 'Holes whose regulation shot (par 3 = tee shot, par 4 = 2nd, par 5 = 3rd) started ' + b.rng + ': the share that found the green in regulation.',
+          avg: function (L) { var n = sum(L, 'gn'); return n ? 100 * sum(L, 'gh') / n : null; }, nOf: function (p) { return g(p).gn; } }) +
+        stTrend('abp' + b.id, D, function (p) { var x = g(p); return x.pn ? x.pt / x.pn : null; }, { title: 'Proximity from ' + b.name, short: 'Proximity', color: b.color, ft: true, unit: 'approaches',
+          help: 'Average distance from the hole after the regulation shot from ' + b.rng + ', misses too (feet on the green, yards × 3 off it, 0 if holed; OB left out). Lower is better.',
+          avg: function (L) { var n = sum(L, 'pn'); return n ? sum(L, 'pt') / n : null; }, nOf: function (p) { return g(p).pn; } }); };
     var cats = [
       ['driver', 'Driver', function () { return stBox(D) + sgT('ott') + pctT('fir'); }, [['OTT', function (p) { return p.sg.ott; }], ['FW', function (p) { return p.fir; }, 'pct']]],
-      ['approach', 'Approach', function () { return sgT('app') + pctT('gir') + stTrend('prox', D, function (p) { return p.prox; }, { title: 'Approach proximity', short: 'Proximity', color: '#2e9d4f', ft: true, unit: 'approaches',
+      ['approach', 'Approach', function () { if (abSel) return abSeg() + abT(abSel);
+        return abSeg() + sgT('app') + brk('apbrk', 'Where approach strokes go', function (p) { return p.sg.app; }, 'ab', ST_AB) + pctT('gir') + stTrend('prox', D, function (p) { return p.prox; }, { title: 'Approach proximity', short: 'Proximity', color: '#2e9d4f', ft: true, unit: 'approaches',
           help: 'Average distance from the hole after the regulation approach from 40–200 yd, every shot (misses too) – the same shots as the Proximity page’s All button. Lower is better.',
           avg: function (L) { var n = 0, t = 0; L.forEach(function (p) { if (p.prox != null) { n += p.proxN; t += p.prox * p.proxN; } }); return n ? t / n : null; }, nOf: function (p) { return p.proxN; } }); },
         [['APP', function (p) { return p.sg.app; }], ['GIR', function (p) { return p.gir; }, 'pct']]],
@@ -2859,6 +2894,7 @@
       case 'stpickclr': view.stPick = {}; view.stSel = null; render(); return;
       case 'stround': view.stMode = 'sel'; view.stRid = b.getAttribute('data-id'); view.stSel = null; render(); return;
       case 'stcmp': view.stCmp = !view.stCmp; view.stSel = null; render(); return;
+      case 'stappb': view.stAppB = v || null; view.stSel = null; render(); return; // v275: Approach distance chips
       case 'stcat': (view.stOpen = view.stOpen || {})[v] = !view.stOpen[v]; render(); return;
       case 'stpmb': view.stPmB = v || 'all'; render(); return;
       case 'stcur': var oD = statsData(); if (!oD.openP) return; view.stMode = 'sel'; view.stRid = oD.openP.id; view.stCmp = true; view.stSel = null; (view.stOpen = view.stOpen || {}).scoring = true; render();
