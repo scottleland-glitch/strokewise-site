@@ -375,3 +375,14 @@ html body .clubtab .p3tag { display: block; font-size: 10px; font-weight: 600; c
 .appui button.stevent, .appui button.stevent.sel, .appui button.stevent b { color: #1f2d38; }
 .appui button.stevent.sel { background: #e6efff; border-color: #2f64b5; }
 .appui button.stevent span { color: #4b5d6e; }
+
+/* v277: Choose rounds folds into one line; a distance with 1-2 approaches keeps its map with a note */
+.appui .dsppickc { padding: 6px; }
+.appui .dsppicksum { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 12px; border: 0; border-radius: 12px; background: transparent; box-shadow: none; text-align: left; color: #1f2d38; font: inherit; cursor: pointer; }
+.appui .dsppicksum > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.appui .dsppicksum b { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1f2d38; }
+.appui .dsppicksum small { font-size: 12.5px; color: #5b6b78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appui .dsppicksum em { font-style: normal; font-size: 13.5px; font-weight: 600; color: #1f5fa8; padding: 6px 12px; border-radius: 999px; background: rgba(31, 95, 168, .1); }
+.appui .dsppickhd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 2px 8px; font-size: 13px; color: #5b6b78; }
+.appui .dsppickhd .dsppickdone { min-height: 34px; padding: 0 16px; border-radius: 999px; border: 0; background: #1f2d38; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; box-shadow: none; cursor: pointer; }
+.appui .dspfewnote { margin: 2px 4px 8px; padding: 8px 12px; border-radius: 10px; background: rgba(255, 224, 102, .28); color: #4a3d0c; font-size: 13px; line-height: 1.35; }

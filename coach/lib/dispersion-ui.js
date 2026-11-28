@@ -48,6 +48,13 @@
       var on = {}; (d.sel || []).forEach(function (id) { on[id] = 1; }); var same = function (ids) { return ids.length === d.sel.length && ids.every(function (id) { return on[id]; }); };
       var R = d.R0.slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }), all = !!d.s.rpickAll, Rs = all ? R : R.slice(0, 12);
       var h = '<div class="frostcard bzcard dsppick" id="dsppick">';
+      // v277 (Scott: "this menu needs to collapse after I choose a tournament"): folded = one line saying what is picked, with Change
+      if (!d.s.rpickOpen) { var ev = d.EV.filter(function (e) { return same(e.ids); })[0], pk = R.filter(function (r) { return on[r.id]; }), md = function (r) { return new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+        return '<div class="frostcard bzcard dsppick dsppickc" id="dsppick"><button type="button" class="dsppicksum" data-act="dsprpick" aria-expanded="false"><span>' +
+          (ev ? '<b>🏆 ' + esc(ev.name) + '</b><small>' + esc(ev.when) + ' · ' + ev.n + ' round' + (ev.n === 1 ? '' : 's') + ' · ' + ev.holes + ' holes</small>'
+            : '<b>' + pk.length + ' round' + (pk.length === 1 ? '' : 's') + ' picked</b><small>' + esc(pk.slice(0, 4).map(md).join(', ') + (pk.length > 4 ? ' +' + (pk.length - 4) : '')) + '</small>') +
+          '</span><em>Change</em></button></div>'; }
+      h += '<div class="dsppickhd"><span>Pick a tournament or rounds</span><button type="button" class="dsppickdone" data-act="dsprpick" aria-expanded="true">Done</button></div>';
       if (d.EV.length) h += '<h4 class="dsph4">Tournaments</h4><div class="dspevs">' + d.EV.map(function (e, i) { var o = same(e.ids);
         return '<button type="button" class="dspev' + (o ? ' sel' : '') + '" data-act="dsprev" data-v="' + i + '" aria-pressed="' + o + '"><b>🏆 ' + esc(e.name) + '</b><span>' + esc(e.when) + ' · ' + e.n + ' round' + (e.n === 1 ? '' : 's') + ' · ' + e.holes + ' holes</span></button>'; }).join('') + '</div>';
       h += '<h4 class="dsph4">Rounds · ' + d.sel.length + ' picked</h4><div class="dsprds">' + Rs.map(function (r) { var o = !!on[r.id], dt = new Date(r.date);
@@ -70,6 +77,10 @@
         var grid = D.roundPinGrid(P), byPin = SRC === 'pins';
         if (byPin && (!s.rpin || !grid[s.rpin] || !grid[s.rpin].n)) s.rpin = (D.PINS.map(function (p) { return p.k; }).filter(function (k) { return grid[k].n; }).sort(function (a, b) { return grid[b].n - grid[a].n; })[0]) || null; // most-played pin first
         var A = byPin ? (s.rpin ? D.analyseRoundPin(P, s.rpin) : null) : s.ryd ? D.analyseRounds(P, s.ryd, P.noDir[s.ryd]) : null;
+        // v277 (Scott: "it snaps the map closed"): a distance with 1–2 approaches keeps the map – its balls are drawn, no ring, and a note says 3+ are needed for the numbers
+        if (!byPin && A && !A.ok && A.n) { var Lf = P.filter(function (p) { return p.yd === s.ryd; });
+          A = { n: Lf.length, ok: true, few: true, rounds: true, raw: Lf, show: Lf, ell: null, yd: s.ryd, noDir: A.noDir, onPct: 100 * Lf.filter(function (p) { return p.on; }).length / Lf.length,
+            medFt: D.median(Lf.map(function (p) { return p.ft; })), sg: Lf.reduce(function (t, p) { return t + (p.sg || 0); }, 0) / Lf.length }; }
         if (byPin && A && A.ok) { var bk = rk + '|' + s.rpin; if (bcache.key !== bk) { bcache.key = bk; bcache.B = D.roundPinBest(A, s.rpin, SG, bl); } A.best = bcache.B;
           // v262 (Scott): Aim for whatever groups are shown – the shots shown are the pattern; Most greens and Best SG are worked out for them
           var vis = pgVis(), L = A.show.filter(function (p) { return vis[p.g]; }), pk = bk + '|' + vis.join(''); if (pcache.key !== pk) { pcache.key = pk;
@@ -167,15 +178,17 @@
       var bestL = d.byPin ? pgLine(A, pinName) : '';
       var rAim = d.byPin ? '<div class="dspaimrow" id="dspraimrow"><span>Aim</span>' + seg('dspraim', raimMode(), RAIMS) + '</div>' : '';
       var fsAim = d.byPin ? '<div class="dspfsaim" role="group" aria-label="Aim">' + RAIMS.map(function (it) { var on = it[0] === raimMode(); return '<button type="button" class="' + (on ? 'sel' : '') + '" data-fsaim="' + it[0] + '" aria-pressed="' + on + '">' + it[1] + '</button>'; }).join('') + '</div>' : '';
-      h += '<div class="frostcard bzcard dspplay"><div class="dspcvwrap" id="dspcvwrap">' + fsTop(d.byPin ? esc(pinName) + ' pins · ' + A.n + ' shot' + (A.n === 1 ? '' : 's') : 'From ' + s.ryd + ' yd · ' + A.n + ' shot' + (A.n === 1 ? '' : 's')) +
+      var fewN = A.few ? '<p class="dspfewnote" id="dspfew">' + A.n + ' approach' + (A.n === 1 ? '' : 'es') + ' from ' + s.ryd + ' yd' + nd + ' – shown on the map. 3+ needed for the pattern and the numbers.</p>' : '';
+      h += '<div class="frostcard bzcard dspplay">' + fewN + '<div class="dspcvwrap" id="dspcvwrap">' + fsTop(d.byPin ? esc(pinName) + ' pins · ' + A.n + ' shot' + (A.n === 1 ? '' : 's') : 'From ' + s.ryd + ' yd · ' + A.n + ' shot' + (A.n === 1 ? '' : 's')) +
         '<canvas id="dspcv" aria-label="' + esc(d.byPin ? 'Where your ' + A.n + ' approaches to ' + pinName.toLowerCase() + ' pins finished' : 'Where your ' + A.n + ' approaches from ' + s.ryd + ' yd finished') + '"></canvas>' +
-        fsInfo((d.byPin ? fsAim + pgToggles(A, 'fs') : '') + (bestL || ('<b>' + (d.byPin ? esc(pinName) + ' pins' : 'From ' + s.ryd + ' yd') + '</b> · ' + Math.round(A.onPct) + '% on the green · ' + Math.round(A.medFt) + '’ median · ' + sgTxt(A.sg)))) +
+        fsInfo((d.byPin ? fsAim + pgToggles(A, 'fs') : '') + (bestL || (A.few ? '<b>From ' + s.ryd + ' yd</b> · ' + A.n + ' shot' + (A.n === 1 ? '' : 's') + ' – 3+ for the numbers' : '<b>' + (d.byPin ? esc(pinName) + ' pins' : 'From ' + s.ryd + ' yd') + '</b> · ' + Math.round(A.onPct) + '% on the green · ' + Math.round(A.medFt) + '’ median · ' + sgTxt(A.sg)))) +
         '<div class="dspcap sr" id="dspcap" aria-live="polite"><b>' + (d.byPin ? esc(pinName) + ' pins' : 'From ' + s.ryd + ' yd') + '</b><span>' + Math.round(A.onPct) + '% on the green · ' + Math.round(A.medFt) + '’ median</span></div></div>' +
         '<div class="dspctl"><button class="dspgo" id="dspgo" data-act="dspplay">▶ Play</button></div>' +
         (d.byPin ? rAim + pgToggles(A, 'act') + '<p class="muted dspnote">On or off the drawn green = where each ball really finished. The yellow ring holds 8 of 10 of the shots shown (5+). Tap a yardage to show or hide it. Aim moves the shots shown as a group: Most greens to the spot that hits the most greens, Best SG to the one that loses the fewest strokes (the dashed ring = where they really went; it assumes you were firing at the flag).</p>' + bestL
           : '<p class="dsplegend"><span><span class="dspk w"></span>on the green</span><span><span class="dspk r"></span>missed</span>' + (A.ell ? '<span><span class="dspk e"></span>8 of 10 shots</span>' : '') + '</p>') +
         '<p class="muted dspsrc" id="dspsrc">Your ' + A.n + ' approach' + (A.n === 1 ? '' : 'es') + (d.byPin ? ' to ' + esc(pinName.toLowerCase()) + ' pins, all distances' : ' from ' + (s.ryd - 5) + '–' + (s.ryd + 4) + ' yd') + ' (fairway or tee' + (d.play === 'tournament' ? ', tournaments' : d.play === 'pick' ? ', ' + d.nRounds + ' picked round' + (d.nRounds === 1 ? '' : 's') : '') + ') · where they finished' + nd + '</p></div>';
       if (d.byPin) h += whyHTML(d);
+      if (A.few) return h; // v277: no "What happened" numbers from 1–2 shots
       var pct = function (v, l) { return '<div><b>' + v + '%</b><span>' + l + '</span></div>'; };
       h += '<div class="frostcard bzcard" id="dspactual"><h3 class="bzh">What happened ' + (d.byPin ? 'to ' + esc(where) : 'from ' + where) + ' ' + tip('dspact', 'About round dispersion') + '</h3>' +
         tipBody('dspact', 'These are finishes, not landing spots: they include the bounce and roll, the green’s slope, the wind and where you chose to aim – so this is how you score from here, not your pure pattern (that’s what Club · sim is for). Each dot is placed by how far it finished from the pin and the direction you entered, spread inside that direction. Each dot is where the ball finished, measured from the pin (your target): how far away and the direction you entered. By distance: no green is drawn – white = it finished on the green, red = it missed, wherever it sits; rings every 15 feet. By pin location: the standard green with the flag where it was, balls coloured by how far out they were hit (white under 120, red 120–169, blue 170+); a dot is slid along its line just across the edge when the drawn green and the real result disagree – the numbers use the real spots. <b>Best aim</b> (by pin location, 5+ shots): your real finishes are treated as your pattern when firing at that flag and moved as a group around the standard green to the spot that loses the fewest strokes (a spot within 0.03 a shot of the flag counts as the flag). The change is added to what really happened. It assumes you were firing at the flag – if you were already playing away from it, the true gain is smaller. Tap the picture to play it full screen; swipe down to close.') +
@@ -301,8 +314,9 @@
       if (a === 'dspraim') { pgAimSet(v); return; } // v262 // v260: a distance group on / off
       if (a === 'dsprpin') { s.rpin = v; s.rgoff = null; /* v261: a pin always drops every group */ anim = { play: true }; openFs('top'); keepScroll(); return; } // v259: plays full screen // v249: grid and picture share the screen
       if (a === 'dspsrc') { setOpt('src', v === 'rounds' || v === 'pins' ? v : 'sim'); anim = null; gAnim = null; keepScroll(); return; }
-      if (a === 'dsprplay') { setOpt('play', v === 'tournament' || v === 'pick' ? v : 'all'); anim = null; keepScroll(); return; }
-      if (a === 'dsprev') { var E = rEvents(env.rounds(s.who) || [])[+v]; if (E) s.rsel = E.ids.slice(); anim = null; keepScroll(); return; } // v263 a whole tournament
+      if (a === 'dsprplay') { setOpt('play', v === 'tournament' || v === 'pick' ? v : 'all'); if (v === 'pick') s.rpickOpen = true; anim = null; keepScroll(); return; } // v277: tapping Choose opens the list
+      if (a === 'dsprev') { var E = rEvents(env.rounds(s.who) || [])[+v]; if (E) s.rsel = E.ids.slice(); s.rpickOpen = false; anim = null; pickClosed(); return; } // v263 a whole tournament; v277 the picker folds up
+      if (a === 'dsprpick') { s.rpickOpen = !s.rpickOpen; if (s.rpickOpen) keepScroll(); else pickClosed(); return; } // v277 Change / Done
       if (a === 'dsprrd') { var cur = (s.rsel || []).slice(), ix = cur.indexOf(v); if (ix >= 0) { if (cur.length > 1) cur.splice(ix, 1); } else cur.push(v); s.rsel = cur; anim = null; keepScroll(); return; }
       if (a === 'dsprall') { s.rpickAll = !s.rpickAll; keepScroll(); return; }
       if (a === 'dspaim') { var Ad = data().A; if (!Ad || !Ad.pins) return; var pp = Ad.pins.filter(function (x) { return x.k === s.pin; })[0] || Ad.pins[4], from = aimOf(pp, aimMode());
@@ -326,7 +340,15 @@
       if (a === 'dspimpsave') { var I = s.imp, sh = impShots(I), G = D.clubGroups(sh), T = {}; G.forEach(function (g) { T[g.club] = D.bucket(I.targets[g.club] || g.target); });
         sh.forEach(function (x) { x.target = T[x.club] || D.bucket(x.carry); }); saveSession(I.name, I.date, sh); return; }
     }
-    function keepScroll() { var y = window.scrollY; env.render(); window.scrollTo(0, y); }
+    // v277: the page AND the distance / club rails stay where they were (the rails used to jump back to the start)
+    // v277: after the picker folds up, keep its line where it was on screen (the page gets much shorter above the map)
+    function pickClosed() { var el = document.getElementById('dsppick'), y0 = el ? el.getBoundingClientRect().top : null, sy = window.scrollY; keepScroll();
+      var e2 = document.getElementById('dsppick'); if (e2 && y0 != null) { var t = e2.getBoundingClientRect().top; if (t < 70) window.scrollBy(0, t - Math.max(70, Math.min(y0, 120))); } else window.scrollTo(0, sy); }
+    function keepScroll() { var y = window.scrollY, rl = [].map.call(document.querySelectorAll('.dsppage .dspyds'), function (r) { return r.scrollLeft; });
+      var pg0 = document.querySelector('.dsppage'), ph = pg0 ? pg0.offsetHeight : 0; env.render();
+      [].forEach.call(document.querySelectorAll('.dsppage .dspyds'), function (r, i) { if (rl[i] != null) { r.scrollLeft = rl[i]; r.dispatchEvent(new Event('scroll')); } });
+      var pg = document.querySelector('.dsppage'); if (pg && ph && y > 0 && document.documentElement.scrollHeight - window.innerHeight < y) pg.style.minHeight = ph + 'px'; // a shorter page would pull the view up
+      window.scrollTo(0, y); }
     document.addEventListener('change', function (ev) {
       var t = ev.target; if (!t) return;
       if (t.id === 'dspfile') { if (ro()) return; var f = t.files && t.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { readFile(String(rd.result)); }; rd.onerror = function () { env.toast('Could not read that file'); }; rd.readAsText(f); t.value = ''; return; }

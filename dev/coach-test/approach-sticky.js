@@ -48,5 +48,17 @@ const OUT = process.argv[2] || '/tmp/approach-sticky', W = 390, Hh = 844; const 
   for (const r of ['', '/rounds', '/mygame', '/trends', '/practice', '/plan', '/tests', '/dispersion']) { await go(r); fails += await sweep('page ' + (r || 'overview'));
     for (const sel of ['.dspsrc button:not(.sel)', '[data-act="dsprall"]', '[data-act="dsprev"]']) { const e = await page.$(sel); if (e) { await e.click().catch(() => {}); await page.waitForTimeout(500); fails += await sweep('page ' + r + ' after ' + sel); } } }
   assert.strictEqual(fails, 0, 'unreadable selected buttons');
+  // v277 Dispersion › Rounds › Choose folds up once a tournament (or Done) is picked; a distance with 1–2 approaches keeps the map
+  await go('/dispersion'); await page.click('[data-act="dspsrc"][data-v="rounds"]'); await page.waitForTimeout(500); await page.click('[data-act="dsprplay"][data-v="pick"]'); await page.waitForSelector('#dsppick .dsprds');
+  if (await page.$('#dsppick .dspev')) { await page.click('#dsppick .dspev'); await page.waitForSelector('#dsppick.dsppickc'); console.log('PASS Choose: tournament picked, list folded –', (await page.textContent('#dsppick')).replace(/\s+/g, ' ').trim()); }
+  else { await page.click('#dsppick .dsppickdone'); await page.waitForSelector('#dsppick.dsppickc'); console.log('PASS Choose: Done folds the list –', (await page.textContent('#dsppick')).replace(/\s+/g, ' ').trim()); }
+  const sumSt = await page.$eval('#dsppick .dsppicksum', (e) => { const c = getComputedStyle(e); return [c.backgroundColor, getComputedStyle(e.querySelector('b')).color, e.getBoundingClientRect().height]; });
+  assert.ok(/^rgb\((\d|[1-5]\d), (\d|[1-5]\d), (\d|[1-6]\d)\)$/.test(sumSt[1]) && sumSt[2] < 80, 'folded line looks right ' + JSON.stringify(sumSt)); await page.screenshot({ path: OUT + '/web-pick-folded.png' });
+  await page.click('#dsppick .dsppicksum'); await page.waitForSelector('#dsppick .dsprds'); console.log('PASS Change opens the list again');
+  await page.click('[data-act="dsprplay"][data-v="all"]'); await page.waitForTimeout(500);
+  const fewC = await page.$$eval('#dspyds .dspyd', (L) => L.map((e) => [e.getAttribute('data-v'), +e.querySelector('span').textContent]).filter((x) => x[1] < 3).map((x) => x[0]));
+  if (fewC.length) { await page.click('#dspyds [data-v="' + fewC[0] + '"]'); await page.waitForTimeout(500); assert.ok(await page.$('#dspcvwrap canvas') && await page.$('#dspfew'), 'few: map + note');
+    console.log('PASS ' + fewC[0] + ' yd (few): map stays with "' + (await page.textContent('#dspfew')) + '"'); await page.screenshot({ path: OUT + '/web-few.png' }); } else console.log('(no 1–2 shot distance in the seed data)');
+  assert.strictEqual(errs, 0, 'page errors after dispersion');
   await b.close(); srv.close && srv.close(); web.kill(); process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });
