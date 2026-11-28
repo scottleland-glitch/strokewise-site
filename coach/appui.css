@@ -3418,3 +3418,6 @@
 .appui .wktournote .pgtour { width: 12px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .appui .prtour { color: #2f5f9e; }
 .appui .trchart .trtour { stroke: none; opacity: .9; } .appui .trchart .trtourtx { fill: #2f5f9e; }
+/* v272 (Scott): a dot for each tournament day on the practice charts (like the round ticks on Trends) */
+.appui .wkchart .wktdot { fill: #c99a2a; stroke: #fff; stroke-width: 1; }
+.appui .tdkey { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #c99a2a; vertical-align: 1px; margin-right: 2px; }
