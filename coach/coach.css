@@ -367,3 +367,11 @@ html body .clubtab .p3tag { display: block; font-size: 10px; font-weight: 600; c
 .appui button.dsprd.sel { border-color: #1f2d38; background: rgba(255, 255, 255, .85); color: #1f2d38; }
 .appui button.dspev { min-height: 48px; padding: 8px 12px; border-radius: 12px; border: 1.5px solid rgba(31, 45, 56, .2); background: rgba(255, 255, 255, .5); color: #1f2d38; box-shadow: none; }
 .appui button.dspev.sel { background: #1f2d38; border-color: #1f2d38; color: #fff; }
+/* v276: the tournament name (<b>) kept the site's dark text colour on the dark selected button – make it white too */
+.appui button.dspev b { color: inherit; }
+.appui button.dspev.sel b { color: #fff; }
+.appui button.dspev.sel span { color: rgba(255, 255, 255, .78); }
+/* v276 (Scott: picked event on Stats > Choose rounds had white text on light blue): keep the app's dark text there */
+.appui button.stevent, .appui button.stevent.sel, .appui button.stevent b { color: #1f2d38; }
+.appui button.stevent.sel { background: #e6efff; border-color: #2f64b5; }
+.appui button.stevent span { color: #4b5d6e; }
