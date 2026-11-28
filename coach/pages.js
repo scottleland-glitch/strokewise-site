@@ -342,7 +342,7 @@
 
     // ---------- v246 Dispersion: the athlete's sim shots (app v245 screens, read-only, no phone top bar) ----------
     var DSPV = { screen: 'disp' }, DSPUI = null, dspUid = null;
-    var pendingRp = null;
+    var pendingRp = null, rpKey = null; // v278 (Scott: closing a replay opened from Dispersion left him on the round): rpKey = the round page it opened on
     function dspUI(uid) {
       if (!window.DISP || !DISP.ui) return null;
       if (!DSPUI || dspUid !== uid) { dspUid = uid; DSPV = { screen: 'disp' };
@@ -372,7 +372,8 @@
     function render(uid, parts, query) {
       var p = parts[0] || '', a = decodeURIComponent(parts[1] || '');
       var key = uid + '|' + (p === 'round' ? a : ''); if (key !== lastKey) { AV.view.map = null; AV.view.replay = null; AV.view.sgt = null; AV.view.stx = {}; lastKey = key; }
-      if (pendingRp && p === 'round' && !parts[2]) { if (a === pendingRp.rid) { AV.view.replay = pendingRp.hi; AV.view.rpGreen = false; } pendingRp = null; } // v277
+      if (key !== rpKey) rpKey = null; // v278: the replay-from-Dispersion mark lasts only on the round it opened
+      if (pendingRp && p === 'round' && !parts[2]) { if (a === pendingRp.rid) { AV.view.replay = pendingRp.hi; AV.view.rpGreen = false; rpKey = key; } pendingRp = null; } // v277
       if (p === 'rounds') return { tab: 'rounds', html: roundsPage(uid) };
       if (p === 'round') { if (parts[2] === 'hole') return { tab: 'rounds', html: holePage(uid, a, +parts[3] || 1) }; if (parts[2] === 'birdie') return { tab: 'rounds', html: birdiePage(uid, a) }; return { tab: 'rounds', html: roundPage(uid, a, query) }; }
       if (p === 'stats') return { tab: 'stats', html: statsPage(uid) };
@@ -404,6 +405,6 @@
     var NAV = { goHole: 1, setbl: 1 }, ALLOWED = {};
     ('info mgperiod mgknow trzoom trwk strange stpick stpickev stpickclr stround stcmp stcat stappb stpmb stcur stpt blminest blminehist tkknow stx map mapscope mapclose pinseg proxb proxlie clubsel heat pmg puttn cmpn cmpkind cmpgrp cmpside bzscope replay rpgreen rpgreenback rpghole rpclose wkoff wkspan wkfull wkclose prfull prclose plweek plbench sgtoggle prplan sgtrow sgttrend sgthub setbl goHole wkday wkdayclose prday prmoredays dspyd dsppin dspplay dspall dspmode dspfac dsptip dspclub dspryd dspsrc dsprplay dspaim dsprpin dsprgrp dspraim dsprev dsprpick dsprrd dsprall trinfo trfs trfsrot').split(' ').forEach(function (k) { ALLOWED[k] = 1; });
     function renderWeb(uid, parts, query) { var r = render(uid, parts, query); if (r && r.html) r.html = webText(r.html); return r; }
-    return { render: renderWeb, overlay: overlay, after: after, openDay: openDay, dspAct: dspAct, RS: RS, PS: PS, SHOTS: SHOTS, withAV: withAV, ALLOWED: ALLOWED, H: H };
+    return { fromDsp: function () { return !!rpKey && rpKey === lastKey; }, render: renderWeb, overlay: overlay, after: after, openDay: openDay, dspAct: dspAct, RS: RS, PS: PS, SHOTS: SHOTS, withAV: withAV, ALLOWED: ALLOWED, H: H };
   };
 })(window);

@@ -69,7 +69,12 @@ const OUT = process.argv[2] || '/tmp/approach-sticky', W = 390, Hh = 844; const 
     await page.screenshot({ path: OUT + '/web-shot-card.png' }); const hn = card.match(/Hole (\d+)/)[1];
     await page.click('.dspshotrp'); await page.waitForSelector('#replayview', { timeout: 8000 }); const rh = await page.textContent('#replayview .maphead b'); assert.strictEqual(rh, 'Hole ' + hn + ' replay');
     assert.match(await page.evaluate(() => location.hash), /\/round\//); console.log('PASS ▶ Replay this hole: the round opens with "' + rh + '"'); await page.screenshot({ path: OUT + '/web-shot-replay.png' });
-    await page.goBack(); await page.waitForSelector('#dspcvwrap', { timeout: 8000 }); console.log('PASS browser Back: Dispersion again'); }
+    await page.click('#replayview [data-act="rpclose"]'); await page.waitForSelector('#dspcvwrap', { timeout: 8000 }); assert.ok(!(await page.$('#replayview')), 'replay closed');
+    assert.match(await page.evaluate(() => location.hash), /\/dispersion$/); console.log('PASS v278 ✕ Close: back on Dispersion (not the round)');
+    // a replay opened from the round page itself still closes onto the round
+    await page.click('#dspcvwrap canvas', { position: { x: 5, y: 5 } }).catch(() => {}); if (await page.$('.dspfs')) await page.click('.dspfsx');
+    await page.goForward(); await page.waitForTimeout(800); if (await page.$('[data-act="replay"]')) { await page.click('[data-act="replay"]'); await page.waitForSelector('#replayview'); await page.click('#replayview [data-act="rpclose"]'); await page.waitForTimeout(500);
+      assert.match(await page.evaluate(() => location.hash), /\/round\//); assert.ok(!(await page.$('#replayview'))); console.log('PASS replay opened on the round page: ✕ Close stays on the round'); } }
   assert.strictEqual(errs, 0, 'page errors after dispersion');
   await b.close(); srv.close && srv.close(); web.kill(); process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });
