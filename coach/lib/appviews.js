@@ -525,7 +525,22 @@
     var tcw = who && who !== 'All players' && who !== 'No name' ? who : mgWho(); if (tcw) { try { h += tourCmpHTML(tcw, mgData(tcw)); } catch (e) { console.warn(e); } }
     return h + '</div>';
   }
-  function stListScroll() { var L = document.getElementById('strounds'), s = L && L.querySelector('.stri.sel'); if (!s) return;
+  // v276 (Scott): the Approach distance chips stay pinned under the top bar while Approach is open (sticky; top = the bar's bottom, measured,
+  // since its height changes with the name), and switching distance keeps the same kind of chart (strokes gained / greens / proximity) where it was
+  function stAbStick() { var seg = document.getElementById('stabseg'); if (!seg) return; var top = 0;
+    [].forEach.call(document.querySelectorAll('body > header, .statspage .topbar'), function (e) { var cs = getComputedStyle(e);
+      if (cs.display === 'none' || !/sticky|fixed/.test(cs.position)) return; top = Math.max(top, (parseFloat(cs.top) || 0) + e.offsetHeight); });
+    seg.style.top = Math.round(top + 6) + 'px'; }
+  function stAbKind(id) { return /^st-(abp|prox)/.test(id) ? 'prox' : /^st-(abg|gir)/.test(id) ? 'gir' : 'sg'; }
+  function stAbAnchor() { var seg = document.getElementById('stabseg'), B = document.getElementById('stcatb-approach'); if (!seg || !B) return null;
+    var line = seg.getBoundingClientRect().bottom, card = null, best = 0; // the chart that fills most of the screen under the chips
+    [].forEach.call(B.querySelectorAll('.stcard'), function (c) { var r = c.getBoundingClientRect(), vis = Math.min(r.bottom, innerHeight) - Math.max(r.top, line); if (vis > best) { best = vis; card = c; } });
+    return card ? { kind: stAbKind(card.id), top: card.getBoundingClientRect().top, seg: seg.getBoundingClientRect().top } : null; }
+  function stAbRestore(a) { var seg = document.getElementById('stabseg'), B = document.getElementById('stcatb-approach'); if (!a || !seg || !B) return;
+    var segTop = parseFloat(seg.style.top) || 0; if (a.seg > segTop + 2) return; // the chips were not pinned: the page was near the top, leave it
+    var card = [].filter.call(B.querySelectorAll('.stcard'), function (c) { return stAbKind(c.id) === a.kind; })[0]; if (!card) return;
+    window.scrollBy(0, card.getBoundingClientRect().top - Math.max(a.top, seg.getBoundingClientRect().bottom + 6)); }
+  function stListScroll() { stAbStick(); var L = document.getElementById('strounds'), s = L && L.querySelector('.stri.sel'); if (!s) return;
     if (s.offsetTop < L.scrollTop || s.offsetTop + s.offsetHeight > L.scrollTop + L.clientHeight) L.scrollTop = Math.max(0, s.offsetTop - 6); }
   function finishedRoundsOf(who) {
     var cur = localStorage.getItem(CUR);
@@ -2908,7 +2923,7 @@
       case 'stpickclr': view.stPick = {}; view.stSel = null; render(); return;
       case 'stround': view.stMode = 'sel'; view.stRid = b.getAttribute('data-id'); view.stSel = null; render(); return;
       case 'stcmp': view.stCmp = !view.stCmp; view.stSel = null; render(); return;
-      case 'stappb': view.stAppB = v || null; view.stSel = null; render(); return; // v275: Approach distance chips
+      case 'stappb': var abA = stAbAnchor(); view.stAppB = v || null; view.stSel = null; render(); stAbStick(); stAbRestore(abA); return; // v275: Approach distance chips; v276: keep the same chart in view
       case 'stcat': (view.stOpen = view.stOpen || {})[v] = !view.stOpen[v]; render(); return;
       case 'stpmb': view.stPmB = v || 'all'; render(); return;
       case 'stcur': var oD = statsData(); if (!oD.openP) return; view.stMode = 'sel'; view.stRid = oD.openP.id; view.stCmp = true; view.stSel = null; (view.stOpen = view.stOpen || {}).scoring = true; render();

@@ -1463,6 +1463,9 @@
 .appui .statspage .stleg span { display: inline-flex; align-items: center; gap: 5px; }
 .appui .statspage .stleg svg { width: 24px; height: 8px; overflow: visible; }
 .appui .statspage .stabseg { display: flex; width: 100%; box-sizing: border-box; margin: 4px 0 0; }
+/* v276: pinned under the top bar while Approach is open (overflow: clip instead of hidden so sticky works inside the rounded card) */
+.appui .statspage #stcat-approach { overflow: clip; }
+.appui .statspage .stabseg { position: sticky; top: 80px; z-index: 4; background: rgba(246, 249, 251, .94); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 2px 10px rgba(20, 40, 60, .12); }
 .appui .statspage .stabseg button { flex: 1; min-height: 34px; padding: 0 4px; }
 .appui .statspage .stabnote { margin: 6px 6px 2px; }
 .appui .statspage .stbrk .stbn { font-size: 10px; fill: #8a96a1; } /* v275 */
