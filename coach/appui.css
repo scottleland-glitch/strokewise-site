@@ -1465,6 +1465,7 @@
 .appui .statspage .stabseg { display: flex; width: 100%; box-sizing: border-box; margin: 4px 0 0; }
 .appui .statspage .stabseg button { flex: 1; min-height: 34px; padding: 0 4px; }
 .appui .statspage .stabnote { margin: 6px 6px 2px; }
+.appui .statspage .stbrk .stbn { font-size: 10px; fill: #8a96a1; } /* v275 */
 .appui .statspage .stline.stlight, .appui .statspage .stline.stcmpline { stroke: #b9c3cc; }
 .appui .statspage .stline.stcmpline { stroke: #97a3ae; stroke-dasharray: 5 4; stroke-width: 1.4; }
 .appui .statspage .stdot.stlight { fill: #c4cdd5; }

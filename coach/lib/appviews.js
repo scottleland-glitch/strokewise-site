@@ -462,10 +462,24 @@
         stTrend('abp' + b.id, D, function (p) { var x = g(p); return x.pn ? x.pt / x.pn : null; }, { title: 'Proximity from ' + b.name, short: 'Proximity', color: b.color, ft: true, unit: 'approaches',
           help: 'Average distance from the hole after the regulation shot from ' + b.rng + ', misses too (feet on the green, yards × 3 off it, 0 if holed; OB left out). Lower is better.',
           avg: function (L) { var n = sum(L, 'pn'); return n ? sum(L, 'pt') / n : null; }, nOf: function (p) { return g(p).pn; } }); };
+    // v275 (Scott): proximity side by side for the three approach distance groups (All view) – average feet from the hole after the regulation shot
+    var abProx = function () {
+      var f = function (L, id) { var n = 0, t = 0; L.forEach(function (p) { var x = p.b.ab[id]; n += x.pn; t += x.pt; }); return { n: n, v: n ? t / n : null }; };
+      var rows = ST_AB.map(function (b) { var a = f(D.shown, b.id); return { b: b, v: a.v, n: a.n, all: D.cmp ? f(D.all, b.id).v : null }; });
+      if (!rows.some(function (r) { return r.v != null; })) return '';
+      var mx = Math.max.apply(null, rows.map(function (r) { return Math.max(r.v || 0, r.all || 0); }).concat([1])), W = 358, rh = 28, L = 80, R = 96, bw = W - L - R, H = rows.length * rh + 6;
+      var svg = '<svg class="stchart stbrksvg" id="abproxchart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Approach proximity by distance">' + rows.map(function (r, i) { var y = 3 + i * rh, w = r.v == null ? 0 : Math.max(3, Math.round(r.v / mx * bw));
+        return '<g class="stbrow" data-k="' + esc(r.b.name) + '"><text class="stbl" x="0" y="' + (y + 17) + '">' + esc(r.b.name) + '</text><rect class="stbbg" x="' + L + '" y="' + (y + 5) + '" width="' + bw + '" height="14" rx="7"/>' +
+          '<rect class="stbbar" x="' + L + '" y="' + (y + 5) + '" width="' + w + '" height="14" rx="7" fill="' + r.b.color + '"/>' +
+          (r.all != null ? '<line class="stavgall" x1="' + stF(L + r.all / mx * bw) + '" x2="' + stF(L + r.all / mx * bw) + '" y1="' + (y + 2) + '" y2="' + (y + 22) + '"/>' : '') +
+          '<text class="stbv" x="' + W + '" y="' + (y + 17) + '" text-anchor="end">' + (r.v == null ? '–' : Math.round(r.v) + ' ft') + ' <tspan class="stbn">(' + r.n + ')</tspan></text></g>'; }).join('') + '</svg>';
+      return '<div class="stcard stgraph stbrk" id="st-abprox"><div class="sth"><span>Proximity by distance</span><span class="stv">' + (mode === 'sel' ? 'This round' : mode === '5' ? 'Last 5' : mode === 'pick' ? 'Selected' : 'All rounds') + '</span></div>' + svg +
+        '<p class="stnote">Average distance from the hole after the regulation shot (par 3 = tee shot, par 4 = 2nd, par 5 = 3rd) from each distance, misses too (feet on the green, yards × 3 off it, 0 if holed; OB left out). (n) = shots. Lower is better.' +
+        (D.cmp ? ' Black dotted mark = all rounds.' : '') + ' Tap a distance above for its trend.</p></div>'; };
     var cats = [
       ['driver', 'Driver', function () { return stBox(D) + sgT('ott') + pctT('fir'); }, [['OTT', function (p) { return p.sg.ott; }], ['FW', function (p) { return p.fir; }, 'pct']]],
       ['approach', 'Approach', function () { if (abSel) return abSeg() + abT(abSel);
-        return abSeg() + sgT('app') + brk('apbrk', 'Where approach strokes go', function (p) { return p.sg.app; }, 'ab', ST_AB) + pctT('gir') + stTrend('prox', D, function (p) { return p.prox; }, { title: 'Approach proximity', short: 'Proximity', color: '#2e9d4f', ft: true, unit: 'approaches',
+        return abSeg() + sgT('app') + brk('apbrk', 'Where approach strokes go', function (p) { return p.sg.app; }, 'ab', ST_AB) + abProx() + pctT('gir') + stTrend('prox', D, function (p) { return p.prox; }, { title: 'Approach proximity', short: 'Proximity', color: '#2e9d4f', ft: true, unit: 'approaches',
           help: 'Average distance from the hole after the regulation approach from 40–200 yd, every shot (misses too) – the same shots as the Proximity page’s All button. Lower is better.',
           avg: function (L) { var n = 0, t = 0; L.forEach(function (p) { if (p.prox != null) { n += p.proxN; t += p.prox * p.proxN; } }); return n ? t / n : null; }, nOf: function (p) { return p.proxN; } }); },
         [['APP', function (p) { return p.sg.app; }], ['GIR', function (p) { return p.gir; }, 'pct']]],
