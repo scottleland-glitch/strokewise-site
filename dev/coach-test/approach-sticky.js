@@ -6,7 +6,7 @@ const OUT = process.argv[2] || '/tmp/approach-sticky', W = 390, Hh = 844; const 
 (async () => {
   const srv = await F.start(18795), web = spawn('python3', ['-m', 'http.server', '18796', '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' }); await new Promise((r) => setTimeout(r, 700));
   const S = await SEED.load('http://127.0.0.1:18795', Date.now()); const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
-  const mob = W < 600 && !process.env.DESK, ctx = await b.newContext({ viewport: { width: W, height: Hh }, deviceScaleFactor: mob ? 2 : 1, isMobile: mob, hasTouch: mob }), page = await ctx.newPage();
+  const mob = W < 600 && !process.env.DESK, ctx = await b.newContext({ viewport: { width: W, height: Hh }, deviceScaleFactor: mob ? 2 : 1, isMobile: mob, hasTouch: mob, reducedMotion: 'reduce' }), page = await ctx.newPage();
   page.on('pageerror', (e) => console.log('PAGEERROR', e.message, (e.stack || '').split('\n').slice(0, 3).join(' | '))); page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|fonts\./.test(m.text())) console.log('CONSOLE', m.text().slice(0, 300)); });
   const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' };
   const proxy = (map) => async (route) => { const req = route.request(); if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS }); const u = new URL(req.url());
@@ -48,5 +48,28 @@ const OUT = process.argv[2] || '/tmp/approach-sticky', W = 390, Hh = 844; const 
   for (const r of ['', '/rounds', '/mygame', '/trends', '/practice', '/plan', '/tests', '/dispersion']) { await go(r); fails += await sweep('page ' + (r || 'overview'));
     for (const sel of ['.dspsrc button:not(.sel)', '[data-act="dsprall"]', '[data-act="dsprev"]']) { const e = await page.$(sel); if (e) { await e.click().catch(() => {}); await page.waitForTimeout(500); fails += await sweep('page ' + r + ' after ' + sel); } } }
   assert.strictEqual(fails, 0, 'unreadable selected buttons');
+  // v277 Dispersion › Rounds › Choose folds up once a tournament (or Done) is picked; a distance with 1–2 approaches keeps the map
+  await go('/dispersion'); await page.click('[data-act="dspsrc"][data-v="rounds"]'); await page.waitForTimeout(500); await page.click('[data-act="dsprplay"][data-v="pick"]'); await page.waitForSelector('#dsppick .dsprds');
+  if (await page.$('#dsppick .dspev')) { await page.click('#dsppick .dspev'); await page.waitForSelector('#dsppick.dsppickc'); console.log('PASS Choose: tournament picked, list folded –', (await page.textContent('#dsppick')).replace(/\s+/g, ' ').trim()); }
+  else { await page.click('#dsppick .dsppickdone'); await page.waitForSelector('#dsppick.dsppickc'); console.log('PASS Choose: Done folds the list –', (await page.textContent('#dsppick')).replace(/\s+/g, ' ').trim()); }
+  const sumSt = await page.$eval('#dsppick .dsppicksum', (e) => { const c = getComputedStyle(e); return [c.backgroundColor, getComputedStyle(e.querySelector('b')).color, e.getBoundingClientRect().height]; });
+  assert.ok(/^rgb\((\d|[1-5]\d), (\d|[1-5]\d), (\d|[1-6]\d)\)$/.test(sumSt[1]) && sumSt[2] < 80, 'folded line looks right ' + JSON.stringify(sumSt)); await page.screenshot({ path: OUT + '/web-pick-folded.png' });
+  await page.click('#dsppick .dsppicksum'); await page.waitForSelector('#dsppick .dsprds'); console.log('PASS Change opens the list again');
+  await page.click('[data-act="dsprplay"][data-v="all"]'); await page.waitForTimeout(500);
+  const fewC = await page.$$eval('#dspyds .dspyd', (L) => L.map((e) => [e.getAttribute('data-v'), +e.querySelector('span').textContent]).filter((x) => x[1] < 3).map((x) => x[0]));
+  if (fewC.length) { await page.click('#dspyds [data-v="' + fewC[0] + '"]'); await page.waitForTimeout(500); assert.ok(await page.$('#dspcvwrap canvas') && await page.$('#dspfew'), 'few: map + note');
+    console.log('PASS ' + fewC[0] + ' yd (few): map stays with "' + (await page.textContent('#dspfew')) + '"'); await page.screenshot({ path: OUT + '/web-few.png' }); } else console.log('(no 1–2 shot distance in the seed data)');
+  // v277: tap a red ball → shot card → ▶ Replay this hole opens that round with the replay on top; Back returns to Dispersion
+  { const ryd = await page.$$eval('#dspyds .dspyd', (L) => L.map((e) => [e.getAttribute('data-v'), +e.querySelector('span').textContent]).filter((x) => x[1] >= 3).map((x) => x[0]));
+    await page.click('#dspyds [data-v="' + ryd[0] + '"]'); await page.waitForTimeout(600); await page.$eval('#dspcvwrap', (e) => window.scrollTo(0, e.getBoundingClientRect().top + scrollY - 150)); await page.waitForTimeout(300);
+    const pt = await page.evaluate(() => { const c = document.getElementById('dspcv'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, k = c.width / c.clientWidth, r = c.getBoundingClientRect();
+      for (let i = 0; i < d.length; i += 4) { if (d[i] > 190 && d[i + 1] < 70 && d[i + 2] < 70) { const px = (i / 4) % c.width, py = Math.floor(i / 4 / c.width); if (py < 40 * k) continue; return { x: r.left + px / k, y: r.top + py / k + 1 }; } } return null; });
+    assert.ok(pt, 'a red ball'); await page.mouse.click(pt.x, pt.y); await page.waitForSelector('#dspshot'); await page.waitForTimeout(300);
+    const card = (await page.textContent('#dspshot')).replace(/\s+/g, ' '); assert.match(card, /Hole \d+.*Shot \d+ from \d+ yd.*Replay this hole/); console.log('PASS tap a ball:', card.replace('✕', '').trim());
+    await page.screenshot({ path: OUT + '/web-shot-card.png' }); const hn = card.match(/Hole (\d+)/)[1];
+    await page.click('.dspshotrp'); await page.waitForSelector('#replayview', { timeout: 8000 }); const rh = await page.textContent('#replayview .maphead b'); assert.strictEqual(rh, 'Hole ' + hn + ' replay');
+    assert.match(await page.evaluate(() => location.hash), /\/round\//); console.log('PASS ▶ Replay this hole: the round opens with "' + rh + '"'); await page.screenshot({ path: OUT + '/web-shot-replay.png' });
+    await page.goBack(); await page.waitForSelector('#dspcvwrap', { timeout: 8000 }); console.log('PASS browser Back: Dispersion again'); }
+  assert.strictEqual(errs, 0, 'page errors after dispersion');
   await b.close(); srv.close && srv.close(); web.kill(); process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });

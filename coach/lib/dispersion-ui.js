@@ -48,6 +48,13 @@
       var on = {}; (d.sel || []).forEach(function (id) { on[id] = 1; }); var same = function (ids) { return ids.length === d.sel.length && ids.every(function (id) { return on[id]; }); };
       var R = d.R0.slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }), all = !!d.s.rpickAll, Rs = all ? R : R.slice(0, 12);
       var h = '<div class="frostcard bzcard dsppick" id="dsppick">';
+      // v277 (Scott: "this menu needs to collapse after I choose a tournament"): folded = one line saying what is picked, with Change
+      if (!d.s.rpickOpen) { var ev = d.EV.filter(function (e) { return same(e.ids); })[0], pk = R.filter(function (r) { return on[r.id]; }), md = function (r) { return new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+        return '<div class="frostcard bzcard dsppick dsppickc" id="dsppick"><button type="button" class="dsppicksum" data-act="dsprpick" aria-expanded="false"><span>' +
+          (ev ? '<b>🏆 ' + esc(ev.name) + '</b><small>' + esc(ev.when) + ' · ' + ev.n + ' round' + (ev.n === 1 ? '' : 's') + ' · ' + ev.holes + ' holes</small>'
+            : '<b>' + pk.length + ' round' + (pk.length === 1 ? '' : 's') + ' picked</b><small>' + esc(pk.slice(0, 4).map(md).join(', ') + (pk.length > 4 ? ' +' + (pk.length - 4) : '')) + '</small>') +
+          '</span><em>Change</em></button></div>'; }
+      h += '<div class="dsppickhd"><span>Pick a tournament or rounds</span><button type="button" class="dsppickdone" data-act="dsprpick" aria-expanded="true">Done</button></div>';
       if (d.EV.length) h += '<h4 class="dsph4">Tournaments</h4><div class="dspevs">' + d.EV.map(function (e, i) { var o = same(e.ids);
         return '<button type="button" class="dspev' + (o ? ' sel' : '') + '" data-act="dsprev" data-v="' + i + '" aria-pressed="' + o + '"><b>🏆 ' + esc(e.name) + '</b><span>' + esc(e.when) + ' · ' + e.n + ' round' + (e.n === 1 ? '' : 's') + ' · ' + e.holes + ' holes</span></button>'; }).join('') + '</div>';
       h += '<h4 class="dsph4">Rounds · ' + d.sel.length + ' picked</h4><div class="dsprds">' + Rs.map(function (r) { var o = !!on[r.id], dt = new Date(r.date);
@@ -70,6 +77,10 @@
         var grid = D.roundPinGrid(P), byPin = SRC === 'pins';
         if (byPin && (!s.rpin || !grid[s.rpin] || !grid[s.rpin].n)) s.rpin = (D.PINS.map(function (p) { return p.k; }).filter(function (k) { return grid[k].n; }).sort(function (a, b) { return grid[b].n - grid[a].n; })[0]) || null; // most-played pin first
         var A = byPin ? (s.rpin ? D.analyseRoundPin(P, s.rpin) : null) : s.ryd ? D.analyseRounds(P, s.ryd, P.noDir[s.ryd]) : null;
+        // v277 (Scott: "it snaps the map closed"): a distance with 1–2 approaches keeps the map – its balls are drawn, no ring, and a note says 3+ are needed for the numbers
+        if (!byPin && A && !A.ok && A.n) { var Lf = P.filter(function (p) { return p.yd === s.ryd; });
+          A = { n: Lf.length, ok: true, few: true, rounds: true, raw: Lf, show: Lf, ell: null, yd: s.ryd, noDir: A.noDir, onPct: 100 * Lf.filter(function (p) { return p.on; }).length / Lf.length,
+            medFt: D.median(Lf.map(function (p) { return p.ft; })), sg: Lf.reduce(function (t, p) { return t + (p.sg || 0); }, 0) / Lf.length }; }
         if (byPin && A && A.ok) { var bk = rk + '|' + s.rpin; if (bcache.key !== bk) { bcache.key = bk; bcache.B = D.roundPinBest(A, s.rpin, SG, bl); } A.best = bcache.B;
           // v262 (Scott): Aim for whatever groups are shown – the shots shown are the pattern; Most greens and Best SG are worked out for them
           var vis = pgVis(), L = A.show.filter(function (p) { return vis[p.g]; }), pk = bk + '|' + vis.join(''); if (pcache.key !== pk) { pcache.key = pk;
@@ -167,15 +178,17 @@
       var bestL = d.byPin ? pgLine(A, pinName) : '';
       var rAim = d.byPin ? '<div class="dspaimrow" id="dspraimrow"><span>Aim</span>' + seg('dspraim', raimMode(), RAIMS) + '</div>' : '';
       var fsAim = d.byPin ? '<div class="dspfsaim" role="group" aria-label="Aim">' + RAIMS.map(function (it) { var on = it[0] === raimMode(); return '<button type="button" class="' + (on ? 'sel' : '') + '" data-fsaim="' + it[0] + '" aria-pressed="' + on + '">' + it[1] + '</button>'; }).join('') + '</div>' : '';
-      h += '<div class="frostcard bzcard dspplay"><div class="dspcvwrap" id="dspcvwrap">' + fsTop(d.byPin ? esc(pinName) + ' pins · ' + A.n + ' shot' + (A.n === 1 ? '' : 's') : 'From ' + s.ryd + ' yd · ' + A.n + ' shot' + (A.n === 1 ? '' : 's')) +
+      var fewN = A.few ? '<p class="dspfewnote" id="dspfew">' + A.n + ' approach' + (A.n === 1 ? '' : 'es') + ' from ' + s.ryd + ' yd' + nd + ' – shown on the map. 3+ needed for the pattern and the numbers.</p>' : '';
+      h += '<div class="frostcard bzcard dspplay">' + fewN + '<div class="dspcvwrap" id="dspcvwrap">' + fsTop(d.byPin ? esc(pinName) + ' pins · ' + A.n + ' shot' + (A.n === 1 ? '' : 's') : 'From ' + s.ryd + ' yd · ' + A.n + ' shot' + (A.n === 1 ? '' : 's')) +
         '<canvas id="dspcv" aria-label="' + esc(d.byPin ? 'Where your ' + A.n + ' approaches to ' + pinName.toLowerCase() + ' pins finished' : 'Where your ' + A.n + ' approaches from ' + s.ryd + ' yd finished') + '"></canvas>' +
-        fsInfo((d.byPin ? fsAim + pgToggles(A, 'fs') : '') + (bestL || ('<b>' + (d.byPin ? esc(pinName) + ' pins' : 'From ' + s.ryd + ' yd') + '</b> · ' + Math.round(A.onPct) + '% on the green · ' + Math.round(A.medFt) + '’ median · ' + sgTxt(A.sg)))) +
+        fsInfo((d.byPin ? fsAim + pgToggles(A, 'fs') : '') + (bestL || (A.few ? '<b>From ' + s.ryd + ' yd</b> · ' + A.n + ' shot' + (A.n === 1 ? '' : 's') + ' – 3+ for the numbers' : '<b>' + (d.byPin ? esc(pinName) + ' pins' : 'From ' + s.ryd + ' yd') + '</b> · ' + Math.round(A.onPct) + '% on the green · ' + Math.round(A.medFt) + '’ median · ' + sgTxt(A.sg)))) +
         '<div class="dspcap sr" id="dspcap" aria-live="polite"><b>' + (d.byPin ? esc(pinName) + ' pins' : 'From ' + s.ryd + ' yd') + '</b><span>' + Math.round(A.onPct) + '% on the green · ' + Math.round(A.medFt) + '’ median</span></div></div>' +
         '<div class="dspctl"><button class="dspgo" id="dspgo" data-act="dspplay">▶ Play</button></div>' +
         (d.byPin ? rAim + pgToggles(A, 'act') + '<p class="muted dspnote">On or off the drawn green = where each ball really finished. The yellow ring holds 8 of 10 of the shots shown (5+). Tap a yardage to show or hide it. Aim moves the shots shown as a group: Most greens to the spot that hits the most greens, Best SG to the one that loses the fewest strokes (the dashed ring = where they really went; it assumes you were firing at the flag).</p>' + bestL
           : '<p class="dsplegend"><span><span class="dspk w"></span>on the green</span><span><span class="dspk r"></span>missed</span>' + (A.ell ? '<span><span class="dspk e"></span>8 of 10 shots</span>' : '') + '</p>') +
         '<p class="muted dspsrc" id="dspsrc">Your ' + A.n + ' approach' + (A.n === 1 ? '' : 'es') + (d.byPin ? ' to ' + esc(pinName.toLowerCase()) + ' pins, all distances' : ' from ' + (s.ryd - 5) + '–' + (s.ryd + 4) + ' yd') + ' (fairway or tee' + (d.play === 'tournament' ? ', tournaments' : d.play === 'pick' ? ', ' + d.nRounds + ' picked round' + (d.nRounds === 1 ? '' : 's') : '') + ') · where they finished' + nd + '</p></div>';
       if (d.byPin) h += whyHTML(d);
+      if (A.few) return h; // v277: no "What happened" numbers from 1–2 shots
       var pct = function (v, l) { return '<div><b>' + v + '%</b><span>' + l + '</span></div>'; };
       h += '<div class="frostcard bzcard" id="dspactual"><h3 class="bzh">What happened ' + (d.byPin ? 'to ' + esc(where) : 'from ' + where) + ' ' + tip('dspact', 'About round dispersion') + '</h3>' +
         tipBody('dspact', 'These are finishes, not landing spots: they include the bounce and roll, the green’s slope, the wind and where you chose to aim – so this is how you score from here, not your pure pattern (that’s what Club · sim is for). Each dot is placed by how far it finished from the pin and the direction you entered, spread inside that direction. Each dot is where the ball finished, measured from the pin (your target): how far away and the direction you entered. By distance: no green is drawn – white = it finished on the green, red = it missed, wherever it sits; rings every 15 feet. By pin location: the standard green with the flag where it was, balls coloured by how far out they were hit (white under 120, red 120–169, blue 170+); a dot is slid along its line just across the edge when the drawn green and the real result disagree – the numbers use the real spots. <b>Best aim</b> (by pin location, 5+ shots): your real finishes are treated as your pattern when firing at that flag and moved as a group around the standard green to the spot that loses the fewest strokes (a spot within 0.03 a shot of the flag counts as the flag). The change is added to what really happened. It assumes you were firing at the flag – if you were already playing away from it, the true gain is smaller. Tap the picture to play it full screen; swipe down to close.') +
@@ -301,8 +314,9 @@
       if (a === 'dspraim') { pgAimSet(v); return; } // v262 // v260: a distance group on / off
       if (a === 'dsprpin') { s.rpin = v; s.rgoff = null; /* v261: a pin always drops every group */ anim = { play: true }; openFs('top'); keepScroll(); return; } // v259: plays full screen // v249: grid and picture share the screen
       if (a === 'dspsrc') { setOpt('src', v === 'rounds' || v === 'pins' ? v : 'sim'); anim = null; gAnim = null; keepScroll(); return; }
-      if (a === 'dsprplay') { setOpt('play', v === 'tournament' || v === 'pick' ? v : 'all'); anim = null; keepScroll(); return; }
-      if (a === 'dsprev') { var E = rEvents(env.rounds(s.who) || [])[+v]; if (E) s.rsel = E.ids.slice(); anim = null; keepScroll(); return; } // v263 a whole tournament
+      if (a === 'dsprplay') { setOpt('play', v === 'tournament' || v === 'pick' ? v : 'all'); if (v === 'pick') s.rpickOpen = true; anim = null; keepScroll(); return; } // v277: tapping Choose opens the list
+      if (a === 'dsprev') { var E = rEvents(env.rounds(s.who) || [])[+v]; if (E) s.rsel = E.ids.slice(); s.rpickOpen = false; anim = null; pickClosed(); return; } // v263 a whole tournament; v277 the picker folds up
+      if (a === 'dsprpick') { s.rpickOpen = !s.rpickOpen; if (s.rpickOpen) keepScroll(); else pickClosed(); return; } // v277 Change / Done
       if (a === 'dsprrd') { var cur = (s.rsel || []).slice(), ix = cur.indexOf(v); if (ix >= 0) { if (cur.length > 1) cur.splice(ix, 1); } else cur.push(v); s.rsel = cur; anim = null; keepScroll(); return; }
       if (a === 'dsprall') { s.rpickAll = !s.rpickAll; keepScroll(); return; }
       if (a === 'dspaim') { var Ad = data().A; if (!Ad || !Ad.pins) return; var pp = Ad.pins.filter(function (x) { return x.k === s.pin; })[0] || Ad.pins[4], from = aimOf(pp, aimMode());
@@ -326,7 +340,36 @@
       if (a === 'dspimpsave') { var I = s.imp, sh = impShots(I), G = D.clubGroups(sh), T = {}; G.forEach(function (g) { T[g.club] = D.bucket(I.targets[g.club] || g.target); });
         sh.forEach(function (x) { x.target = T[x.club] || D.bucket(x.carry); }); saveSession(I.name, I.date, sh); return; }
     }
-    function keepScroll() { var y = window.scrollY; env.render(); window.scrollTo(0, y); }
+    // v277: the page AND the distance / club rails stay where they were (the rails used to jump back to the start)
+    // v277: after the picker folds up, keep its line where it was on screen (the page gets much shorter above the map)
+    function pickClosed() { var el = document.getElementById('dsppick'), y0 = el ? el.getBoundingClientRect().top : null, sy = window.scrollY; keepScroll();
+      var e2 = document.getElementById('dsppick'); if (e2 && y0 != null) { var t = e2.getBoundingClientRect().top; if (t < 70) window.scrollBy(0, t - Math.max(70, Math.min(y0, 120))); } else window.scrollTo(0, sy); }
+    // v277: the shot card – which round / hole / shot, where it finished and why it counts as a miss, with ▶ Replay this hole
+    var LIE_TXT = { fairway: 'on the fairway', rough: 'in the rough', deep: 'in deep rough', sand: 'in a bunker', hazard: 'in a hazard', trees: 'in the trees', recovery: 'in trouble', fringe: 'on the fringe', green: 'on the green', holed: 'in the hole' };
+    function shotCard(p) {
+      var old = document.getElementById('dspshot'); if (old) old.remove();
+      var r = (env.rounds(S().who) || []).filter(function (x) { return x.id === p.rid; })[0]; if (!r) return;
+      var dt = new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), yd = Math.round(p.from), onG = p.on, close = !onG && p.endDist <= 10;
+      var where = p.holed ? 'Holed it!' : onG ? 'On the green, ' + Math.round(p.ft) + ' ft from the pin' + (p.dir ? ' (' + esc(p.dir) + ')' : '') + '.'
+        : 'Finished ' + (LIE_TXT[p.endLie] || esc(p.endLie || 'off the green')) + ', ' + Math.round(p.endDist) + ' yd' + (p.dir ? ' ' + esc(p.dir) : '') + ' of the pin – missed the green.';
+      var why = !onG && !p.holed ? (close ? 'Close, but it didn’t finish on the putting surface, so it counts as a missed green – even a few yards off is a miss. ' : '') +
+        (src() === 'pins' ? 'The picture uses a standard green, so a ball can look closer to it than it really was.' : 'Each ball is placed by its distance from the pin and the direction entered.') : '';
+      var el = document.createElement('div'); el.className = 'dspshot'; el.id = 'dspshot'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Shot');
+      el.innerHTML = '<div class="dspshotin"><div class="dspshoth"><b>' + esc(r.course || 'Round') + '</b><button type="button" class="dspshotx" aria-label="Close">✕</button></div>' +
+        '<p class="dspshotsub">' + esc(dt) + (r.play === 'tournament' ? ' · 🏆' : '') + ' · Hole ' + (p.hole + 1) + (p.par ? ' (par ' + p.par + ')' : '') + '</p>' +
+        '<p class="dspshotl"><span class="dspk ' + (onG || p.holed ? 'w' : 'r') + '"></span>Shot ' + p.n + ' from ' + yd + ' yd' + (p.club ? ' · ' + esc(/^\d{2}$/.test(p.club) ? p.club + '°' : p.club) : '') + ' · ' + sgTxt(p.sg) + '</p>' +
+        '<p class="dspshotw">' + where + '</p>' + (why ? '<p class="dspshotwhy">' + why + '</p>' : '') +
+        '<button type="button" class="dspgo dspshotrp">▶ Replay this hole</button></div>';
+      document.body.appendChild(el);
+      el.querySelector('.dspshotx').addEventListener('click', function () { el.remove(); });
+      el.addEventListener('click', function (e) { if (e.target === el) el.remove(); });
+      el.querySelector('.dspshotrp').addEventListener('click', function () { el.remove(); if (fs) closeFs(); if (env.replay) env.replay(p.rid, p.hole); });
+    }
+    function keepScroll() { var y = window.scrollY, rl = [].map.call(document.querySelectorAll('.dsppage .dspyds'), function (r) { return r.scrollLeft; });
+      var pg0 = document.querySelector('.dsppage'), ph = pg0 ? pg0.offsetHeight : 0; env.render();
+      [].forEach.call(document.querySelectorAll('.dsppage .dspyds'), function (r, i) { if (rl[i] != null) { r.scrollLeft = rl[i]; r.dispatchEvent(new Event('scroll')); } });
+      var pg = document.querySelector('.dsppage'); if (pg && ph && y > 0 && document.documentElement.scrollHeight - window.innerHeight < y) pg.style.minHeight = ph + 'px'; // a shorter page would pull the view up
+      window.scrollTo(0, y); }
     document.addEventListener('change', function (ev) {
       var t = ev.target; if (!t) return;
       if (t.id === 'dspfile') { if (ro()) return; var f = t.files && t.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { readFile(String(rd.result)); }; rd.onerror = function () { env.toast('Could not read that file'); }; rd.readAsText(f); t.value = ''; return; }
@@ -425,7 +468,8 @@
     // tap a picture (not full screen yet) to play it full screen
     function bindTapToFs() {
       [['dspcv', 'top'], ['dspgc', 'green']].forEach(function (q) { var c = document.getElementById(q[0]); if (!c || c._fst) return; c._fst = 1; c.style.cursor = 'zoom-in';
-        c.addEventListener('click', function () { if (fs) return; if (q[1] === 'top') anim = { play: true }; else gAnim = { play: true }; openFs(q[1]); mount(); }); });
+        c.addEventListener('click', function (ev) { var hp = q[1] === 'top' ? hitAt(c, ev) : null; if (hp) { ev.stopPropagation(); shotCard(hp); return; }
+          if (fs) return; if (q[1] === 'top') anim = { play: true }; else gAnim = { play: true }; openFs(q[1]); mount(); }); });
     }
     document.addEventListener('keydown', function (ev) { if (fs && (ev.key === 'Escape' || ev.key === 'Esc')) closeFs(); });
     var fsRz = 0; window.addEventListener('resize', function () { if (!fs) return; clearTimeout(fsRz); fsRz = setTimeout(function () { if (fs) { mountTop(); mountGreen(); } }, 150); });
@@ -482,7 +526,12 @@
       el.innerHTML = '<b>' + esc(P.name) + ' pin</b><span>' + Math.round(P.greenPct) + '% on the green · ' + Math.round(P.medFt) + '’ median · <em class="' + D.sgTone(P.sg) + '">' + sgTxt(P.sg) + '</em></span>';
     }
     // draw time t (s) of one pin's animation; returns the time it finishes
+    // v277 (Scott: "tap on any miss … and have the option for a hole replay"): where each round ball was last drawn, for tapping
+    var hitPts = [];
+    function hitAt(cv, ev) { if (!hitPts.length || hitPts.cv !== cv.id) return null; var r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, best = null, bd = 18 * 18;
+      hitPts.forEach(function (h) { var d = (h.x - x) * (h.x - x) + (h.y - y) * (h.y - y); if (d < bd) { bd = d; best = h.p; } }); return best; }
     function frame(ctx, W, H, A, pin, t, quick, d) {
+      hitPts = []; hitPts.cv = 'dspcv';
       var PG = A.rounds && A.pin, MV = PG && A.best && A.best.move ? A.best : null, mvx = MV ? MV.aim.x - pin.x : 0, mvy = MV ? MV.aim.y - pin.y : 0; // PG: by pin location (v248); MV: v259 slide to the best aim
       var fitA = MV ? { show: A.show.concat(A.show.map(function (p) { return { dx: p.dx + mvx, dy: p.dy + mvy }; })), ell: A.ell } : A;
       var yd = A.yd, C = cams(W, H, yd, pin), n = A.show.length, _fit = (C.close = fitClose(W, H, fitA, pin, C.close, !(A.rounds && !A.pin))), T = timeline(quick), orig = { x: pin.x, y: pin.y - yd };
@@ -505,6 +554,7 @@
         if (gc) { ctx.fillStyle = gc.fill; ctx.strokeStyle = gc.edge; } else { ctx.fillStyle = u >= 1 ? (on ? '#fff' : COL.red) : '#fff'; ctx.strokeStyle = u >= 1 ? (on ? 'rgba(0,0,0,.45)' : '#7d1019') : 'rgba(0,0,0,.35)'; } ctx.lineWidth = 0.8;
         var dim = MV && mk >= 1 && !D.onGreen(lx, ly); if (dim) ctx.globalAlpha = 0.38; // v259: after the slide, the balls that would miss the green fade
         ctx.beginPath(); ctx.arc(bx, by, bs * (u < 1 ? 1 + 0.35 * Math.sin(Math.PI * k) : 1), 0, 7); ctx.fill(); ctx.stroke(); if (dim) ctx.globalAlpha = 1;
+        if (u >= 1 && p.rid) hitPts.push({ x: bx, y: by, p: p });
       }
       // the dispersion shape draws itself
       if (t > ellT && A.ell) { var e = A.ell, pr = Math.min(1, (t - ellT) / T.ellDur), cx = X(pin.x + e.cx + ox), cy = Y(pin.y + e.cy + oy);
@@ -547,7 +597,7 @@
       aim = aim || pin; var moved = Math.abs(aim.x - pin.x) > 0.5 || Math.abs(aim.y - pin.y) > 0.5;
       var P = drawScene(ctx, W, H, cam, A.yd, pin, true), X = P.X, Y = P.Y, bs = Math.max(2.6, Math.min(5, 0.6 * cam.s)), G = pgGroups(A, vis);
       var FALL = 0.32, SPREAD = 0.22, HOP = [[0.2, 10], [0.14, 3.5]], NEXT = 0.45, settle = FALL + SPREAD + HOP[0][0] + HOP[1][0], ELL = 0.55;
-      var shown = [], ellT = G.length ? (G.length - 1) * NEXT + settle + 0.05 : 0, MOVE = 0.9;
+      var shown = [], ellT = G.length ? (G.length - 1) * NEXT + settle + 0.05 : 0, MOVE = 0.9; hitPts = []; hitPts.cv = 'dspcv';
       if (!drop) { t = from ? t + ellT + ELL : 1e9; } // no drop: already landed
       var mv0 = from ? ellT + ELL : ellT + ELL + 0.35, mk = Math.max(0, Math.min(1, (t - mv0) / MOVE)), ez = mk < 0.5 ? 2 * mk * mk : 1 - Math.pow(-2 * mk + 2, 2) / 2;
       var sx = from ? from.x : pin.x, sy = from ? from.y : pin.y, ox = sx + (aim.x - sx) * ez - pin.x, oy = sy + (aim.y - sy) * ez - pin.y;
@@ -560,6 +610,7 @@
           else { var a = u - FALL; for (var j = 0; j < HOP.length; j++) { if (a < HOP[j][0]) { var z = a / HOP[j][0]; lift = 4 * z * (1 - z) * HOP[j][1]; break; } a -= HOP[j][0]; }
             if (lift > 0.3) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.arc(bx, by, bs * 0.8, 0, 7); ctx.fill(); } }
           ctx.fillStyle = gc.fill; ctx.strokeStyle = gc.edge; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(bx, by - lift, bs * sc, 0, 7); ctx.fill(); ctx.stroke();
+          if (q.rid) hitPts.push({ x: bx, y: by, p: q });
         });
       });
       // the flag on top of the balls
