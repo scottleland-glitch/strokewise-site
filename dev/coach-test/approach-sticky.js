@@ -28,8 +28,25 @@ const OUT = process.argv[2] || '/tmp/approach-sticky', W = 390, Hh = 844; const 
   await page.screenshot({ path: OUT + '/web-approach-sticky.png' });
   const tc = await page.evaluate(() => { const a = document.querySelector('.appui'), b = document.createElement('button'); b.className = 'dspev sel'; b.innerHTML = '<b>Lakehouse</b><span>x</span>'; a.appendChild(b);
     const r = [getComputedStyle(b).backgroundColor, getComputedStyle(b.querySelector('b')).color]; b.remove(); return r; });
-  assert.deepStrictEqual(tc, ['rgb(31, 45, 56)', 'rgb(255, 255, 255)']); console.log('PASS picked tournament: white name on the dark button', JSON.stringify(tc));
+  assert.deepStrictEqual(tc, ['rgb(31, 45, 56)', 'rgb(255, 255, 255)']);
+  const te = await page.evaluate(() => { const a = document.querySelector('.appui .statspage') || document.querySelector('.appui'), b = document.createElement('button'); b.className = 'stevent sel'; b.innerHTML = '<b>Lakehouse</b><span>x</span>'; a.appendChild(b);
+    const r = [getComputedStyle(b).backgroundColor, getComputedStyle(b.querySelector('b')).color]; b.remove(); return r; });
+  assert.deepStrictEqual(te, ['rgb(230, 239, 255)', 'rgb(31, 45, 56)']); console.log('PASS picked event on Stats: dark name on light blue', JSON.stringify(te)); console.log('PASS picked tournament: white name on the dark button', JSON.stringify(tc));
   const v = await page.$$eval('script[src], link[rel=stylesheet][href]', (L) => L.filter((e) => !/googleapis/.test(e.src || e.href)).map((e) => /\?v=\d+$/.test(e.src || e.href)));
   assert.ok(v.length > 20 && v.every(Boolean), 'every file versioned'); console.log('PASS ' + v.length + ' css/js files carry ?v='); assert.strictEqual(errs, 0, 'page errors'); console.log('PASS no page errors');
+  // every selected button on the athlete pages: its text must stand out from its own background (no white on light, no dark on dark)
+  const sweep = async (label) => { const bad = await page.evaluate(() => { const lum = (c) => { const m = c.match(/[\d.]+/g); if (!m) return null; const a = m.length > 3 ? +m[3] : 1; if (a < 0.5) return null;
+      return m.slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((t, v, i) => t + v * [0.2126, 0.7152, 0.0722][i], 0); };
+    const bgOf = (e) => { for (; e; e = e.parentElement) { const L = lum(getComputedStyle(e).backgroundColor); if (L != null) return L; } return 1; }; const out = [];
+    document.querySelectorAll('.appui button.sel, .appui [aria-pressed="true"]').forEach((bt) => { if (!bt.offsetParent) return; [bt].concat([...bt.querySelectorAll('b, span, strong')]).forEach((t) => {
+      if (!t.textContent.trim() || !t.offsetParent) return; const f = lum(getComputedStyle(t).color), g = bgOf(t); if (f == null) return; const r = (Math.max(f, g) + 0.05) / (Math.min(f, g) + 0.05);
+      if (r < 3) out.push((bt.className || bt.tagName) + ' "' + t.textContent.trim().slice(0, 20) + '" ' + r.toFixed(1)); }); }); return out; });
+    console.log(bad.length ? 'FAIL ' + label + ': ' + bad.join(' | ') : 'PASS ' + label + ': selected buttons readable'); return bad.length; };
+  let fails = 0; const go = async (r) => { await page.evaluate((h) => { location.hash = h; }, '#/a/' + encodeURIComponent(uid) + r); await page.waitForTimeout(900); };
+  await page.evaluate(() => window.scrollTo(0, 0));
+  for (const m of ['5', 'sel', 'pick']) { await page.click('#strange [data-v="' + m + '"]'); await page.waitForTimeout(400); if (m === 'pick' && await page.$('#stevents .stevent')) { await page.click('#stevents .stevent'); await page.waitForTimeout(400); } fails += await sweep('stats ' + m); }
+  for (const r of ['', '/rounds', '/mygame', '/trends', '/practice', '/plan', '/tests', '/dispersion']) { await go(r); fails += await sweep('page ' + (r || 'overview'));
+    for (const sel of ['.dspsrc button:not(.sel)', '[data-act="dsprall"]', '[data-act="dsprev"]']) { const e = await page.$(sel); if (e) { await e.click().catch(() => {}); await page.waitForTimeout(500); fails += await sweep('page ' + r + ' after ' + sel); } } }
+  assert.strictEqual(fails, 0, 'unreadable selected buttons');
   await b.close(); srv.close && srv.close(); web.kill(); process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });
