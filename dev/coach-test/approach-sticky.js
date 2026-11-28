@@ -25,6 +25,11 @@ const OUT = process.argv[2] || '/tmp/approach-sticky', W = 390, Hh = 844; const 
   for (const id of ['w60', 'o100', 'w30']) { await page.click('#stabseg button[data-v="' + id + '"]'); await page.waitForTimeout(400);
     const r = await page.evaluate((i) => { const c = document.getElementById('st-abp' + i).getBoundingClientRect(), s = document.getElementById('stabseg').getBoundingClientRect(); return { c: c.top, s: s.bottom, h: innerHeight }; }, id);
     assert.ok(r.c >= r.s - 1 && r.c < r.h * 0.6, id + ' proximity in view ' + JSON.stringify(r)); console.log('PASS ' + id + ' proximity chart in view', JSON.stringify(r)); }
-  await page.screenshot({ path: OUT + '/web-approach-sticky.png' }); assert.strictEqual(errs, 0, 'page errors'); console.log('PASS no page errors');
+  await page.screenshot({ path: OUT + '/web-approach-sticky.png' });
+  const tc = await page.evaluate(() => { const a = document.querySelector('.appui'), b = document.createElement('button'); b.className = 'dspev sel'; b.innerHTML = '<b>Lakehouse</b><span>x</span>'; a.appendChild(b);
+    const r = [getComputedStyle(b).backgroundColor, getComputedStyle(b.querySelector('b')).color]; b.remove(); return r; });
+  assert.deepStrictEqual(tc, ['rgb(31, 45, 56)', 'rgb(255, 255, 255)']); console.log('PASS picked tournament: white name on the dark button', JSON.stringify(tc));
+  const v = await page.$$eval('script[src], link[rel=stylesheet][href]', (L) => L.filter((e) => !/googleapis/.test(e.src || e.href)).map((e) => /\?v=\d+$/.test(e.src || e.href)));
+  assert.ok(v.length > 20 && v.every(Boolean), 'every file versioned'); console.log('PASS ' + v.length + ' css/js files carry ?v='); assert.strictEqual(errs, 0, 'page errors'); console.log('PASS no page errors');
   await b.close(); srv.close && srv.close(); web.kill(); process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });
