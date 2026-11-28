@@ -386,3 +386,20 @@ html body .clubtab .p3tag { display: block; font-size: 10px; font-weight: 600; c
 .appui .dsppickhd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 2px 8px; font-size: 13px; color: #5b6b78; }
 .appui .dsppickhd .dsppickdone { min-height: 34px; padding: 0 16px; border-radius: 999px; border: 0; background: #1f2d38; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; box-shadow: none; cursor: pointer; }
 .appui .dspfewnote { margin: 2px 4px 8px; padding: 8px 12px; border-radius: 10px; background: rgba(255, 224, 102, .28); color: #4a3d0c; font-size: 13px; line-height: 1.35; }
+
+/* v277: tap a ball on Dispersion › Rounds / Pin location → the shot card (Replay this hole) */
+.dspshot { position: fixed; inset: 0; z-index: 4000; display: flex; align-items: flex-end; justify-content: center; background: rgba(10, 20, 15, .35); }
+.dspshotin { width: 100%; max-width: 520px; box-sizing: border-box; margin: 0 8px calc(env(safe-area-inset-bottom) + 10px); padding: 14px 16px 16px; border-radius: 20px; background: #fbfaf6; color: #1f2d38; box-shadow: 0 10px 40px rgba(0, 0, 0, .3); animation: dspshotup .18s ease-out; }
+@keyframes dspshotup { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+.dspshoth { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dspshoth b { font-size: 17px; font-weight: 600; color: #1f2d38; }
+.dspshotx { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; border: 1px solid rgba(31, 45, 56, .15); background: #fff; color: #1f2d38; font-size: 15px; box-shadow: none; }
+.dspshotsub { margin: 2px 0 10px; font-size: 13px; color: #5b6b78; }
+.dspshotl { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 15px; font-weight: 600; color: #1f2d38; }
+.dspshotl .dspk { flex: none; width: 12px; height: 12px; border-radius: 50%; }
+.dspshotl .dspk.r { background: #d0312d; } .dspshotl .dspk.w { background: #fff; border: 1.5px solid #555; }
+.dspshotw { margin: 0 0 6px; font-size: 14.5px; line-height: 1.4; color: #1f2d38; }
+.dspshotwhy { margin: 0 0 12px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 224, 102, .28); font-size: 13px; line-height: 1.4; color: #4a3d0c; }
+.dspshotrp { display: block; width: 100%; margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { .dspshotin { animation: none; } }
+.dspshot .dspshotrp { background: #1f2d38; border-color: #1f2d38; color: #fff; min-height: 48px; border-radius: 14px; font-size: 16px; font-weight: 600; }

@@ -344,6 +344,27 @@
     // v277: after the picker folds up, keep its line where it was on screen (the page gets much shorter above the map)
     function pickClosed() { var el = document.getElementById('dsppick'), y0 = el ? el.getBoundingClientRect().top : null, sy = window.scrollY; keepScroll();
       var e2 = document.getElementById('dsppick'); if (e2 && y0 != null) { var t = e2.getBoundingClientRect().top; if (t < 70) window.scrollBy(0, t - Math.max(70, Math.min(y0, 120))); } else window.scrollTo(0, sy); }
+    // v277: the shot card – which round / hole / shot, where it finished and why it counts as a miss, with ▶ Replay this hole
+    var LIE_TXT = { fairway: 'on the fairway', rough: 'in the rough', deep: 'in deep rough', sand: 'in a bunker', hazard: 'in a hazard', trees: 'in the trees', recovery: 'in trouble', fringe: 'on the fringe', green: 'on the green', holed: 'in the hole' };
+    function shotCard(p) {
+      var old = document.getElementById('dspshot'); if (old) old.remove();
+      var r = (env.rounds(S().who) || []).filter(function (x) { return x.id === p.rid; })[0]; if (!r) return;
+      var dt = new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), yd = Math.round(p.from), onG = p.on, close = !onG && p.endDist <= 10;
+      var where = p.holed ? 'Holed it!' : onG ? 'On the green, ' + Math.round(p.ft) + ' ft from the pin' + (p.dir ? ' (' + esc(p.dir) + ')' : '') + '.'
+        : 'Finished ' + (LIE_TXT[p.endLie] || esc(p.endLie || 'off the green')) + ', ' + Math.round(p.endDist) + ' yd' + (p.dir ? ' ' + esc(p.dir) : '') + ' of the pin – missed the green.';
+      var why = !onG && !p.holed ? (close ? 'Close, but it didn’t finish on the putting surface, so it counts as a missed green – even a few yards off is a miss. ' : '') +
+        (src() === 'pins' ? 'The picture uses a standard green, so a ball can look closer to it than it really was.' : 'Each ball is placed by its distance from the pin and the direction entered.') : '';
+      var el = document.createElement('div'); el.className = 'dspshot'; el.id = 'dspshot'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Shot');
+      el.innerHTML = '<div class="dspshotin"><div class="dspshoth"><b>' + esc(r.course || 'Round') + '</b><button type="button" class="dspshotx" aria-label="Close">✕</button></div>' +
+        '<p class="dspshotsub">' + esc(dt) + (r.play === 'tournament' ? ' · 🏆' : '') + ' · Hole ' + (p.hole + 1) + (p.par ? ' (par ' + p.par + ')' : '') + '</p>' +
+        '<p class="dspshotl"><span class="dspk ' + (onG || p.holed ? 'w' : 'r') + '"></span>Shot ' + p.n + ' from ' + yd + ' yd' + (p.club ? ' · ' + esc(/^\d{2}$/.test(p.club) ? p.club + '°' : p.club) : '') + ' · ' + sgTxt(p.sg) + '</p>' +
+        '<p class="dspshotw">' + where + '</p>' + (why ? '<p class="dspshotwhy">' + why + '</p>' : '') +
+        '<button type="button" class="dspgo dspshotrp">▶ Replay this hole</button></div>';
+      document.body.appendChild(el);
+      el.querySelector('.dspshotx').addEventListener('click', function () { el.remove(); });
+      el.addEventListener('click', function (e) { if (e.target === el) el.remove(); });
+      el.querySelector('.dspshotrp').addEventListener('click', function () { el.remove(); if (fs) closeFs(); if (env.replay) env.replay(p.rid, p.hole); });
+    }
     function keepScroll() { var y = window.scrollY, rl = [].map.call(document.querySelectorAll('.dsppage .dspyds'), function (r) { return r.scrollLeft; });
       var pg0 = document.querySelector('.dsppage'), ph = pg0 ? pg0.offsetHeight : 0; env.render();
       [].forEach.call(document.querySelectorAll('.dsppage .dspyds'), function (r, i) { if (rl[i] != null) { r.scrollLeft = rl[i]; r.dispatchEvent(new Event('scroll')); } });
@@ -447,7 +468,8 @@
     // tap a picture (not full screen yet) to play it full screen
     function bindTapToFs() {
       [['dspcv', 'top'], ['dspgc', 'green']].forEach(function (q) { var c = document.getElementById(q[0]); if (!c || c._fst) return; c._fst = 1; c.style.cursor = 'zoom-in';
-        c.addEventListener('click', function () { if (fs) return; if (q[1] === 'top') anim = { play: true }; else gAnim = { play: true }; openFs(q[1]); mount(); }); });
+        c.addEventListener('click', function (ev) { var hp = q[1] === 'top' ? hitAt(c, ev) : null; if (hp) { ev.stopPropagation(); shotCard(hp); return; }
+          if (fs) return; if (q[1] === 'top') anim = { play: true }; else gAnim = { play: true }; openFs(q[1]); mount(); }); });
     }
     document.addEventListener('keydown', function (ev) { if (fs && (ev.key === 'Escape' || ev.key === 'Esc')) closeFs(); });
     var fsRz = 0; window.addEventListener('resize', function () { if (!fs) return; clearTimeout(fsRz); fsRz = setTimeout(function () { if (fs) { mountTop(); mountGreen(); } }, 150); });
@@ -504,7 +526,12 @@
       el.innerHTML = '<b>' + esc(P.name) + ' pin</b><span>' + Math.round(P.greenPct) + '% on the green · ' + Math.round(P.medFt) + '’ median · <em class="' + D.sgTone(P.sg) + '">' + sgTxt(P.sg) + '</em></span>';
     }
     // draw time t (s) of one pin's animation; returns the time it finishes
+    // v277 (Scott: "tap on any miss … and have the option for a hole replay"): where each round ball was last drawn, for tapping
+    var hitPts = [];
+    function hitAt(cv, ev) { if (!hitPts.length || hitPts.cv !== cv.id) return null; var r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, best = null, bd = 18 * 18;
+      hitPts.forEach(function (h) { var d = (h.x - x) * (h.x - x) + (h.y - y) * (h.y - y); if (d < bd) { bd = d; best = h.p; } }); return best; }
     function frame(ctx, W, H, A, pin, t, quick, d) {
+      hitPts = []; hitPts.cv = 'dspcv';
       var PG = A.rounds && A.pin, MV = PG && A.best && A.best.move ? A.best : null, mvx = MV ? MV.aim.x - pin.x : 0, mvy = MV ? MV.aim.y - pin.y : 0; // PG: by pin location (v248); MV: v259 slide to the best aim
       var fitA = MV ? { show: A.show.concat(A.show.map(function (p) { return { dx: p.dx + mvx, dy: p.dy + mvy }; })), ell: A.ell } : A;
       var yd = A.yd, C = cams(W, H, yd, pin), n = A.show.length, _fit = (C.close = fitClose(W, H, fitA, pin, C.close, !(A.rounds && !A.pin))), T = timeline(quick), orig = { x: pin.x, y: pin.y - yd };
@@ -527,6 +554,7 @@
         if (gc) { ctx.fillStyle = gc.fill; ctx.strokeStyle = gc.edge; } else { ctx.fillStyle = u >= 1 ? (on ? '#fff' : COL.red) : '#fff'; ctx.strokeStyle = u >= 1 ? (on ? 'rgba(0,0,0,.45)' : '#7d1019') : 'rgba(0,0,0,.35)'; } ctx.lineWidth = 0.8;
         var dim = MV && mk >= 1 && !D.onGreen(lx, ly); if (dim) ctx.globalAlpha = 0.38; // v259: after the slide, the balls that would miss the green fade
         ctx.beginPath(); ctx.arc(bx, by, bs * (u < 1 ? 1 + 0.35 * Math.sin(Math.PI * k) : 1), 0, 7); ctx.fill(); ctx.stroke(); if (dim) ctx.globalAlpha = 1;
+        if (u >= 1 && p.rid) hitPts.push({ x: bx, y: by, p: p });
       }
       // the dispersion shape draws itself
       if (t > ellT && A.ell) { var e = A.ell, pr = Math.min(1, (t - ellT) / T.ellDur), cx = X(pin.x + e.cx + ox), cy = Y(pin.y + e.cy + oy);
@@ -569,7 +597,7 @@
       aim = aim || pin; var moved = Math.abs(aim.x - pin.x) > 0.5 || Math.abs(aim.y - pin.y) > 0.5;
       var P = drawScene(ctx, W, H, cam, A.yd, pin, true), X = P.X, Y = P.Y, bs = Math.max(2.6, Math.min(5, 0.6 * cam.s)), G = pgGroups(A, vis);
       var FALL = 0.32, SPREAD = 0.22, HOP = [[0.2, 10], [0.14, 3.5]], NEXT = 0.45, settle = FALL + SPREAD + HOP[0][0] + HOP[1][0], ELL = 0.55;
-      var shown = [], ellT = G.length ? (G.length - 1) * NEXT + settle + 0.05 : 0, MOVE = 0.9;
+      var shown = [], ellT = G.length ? (G.length - 1) * NEXT + settle + 0.05 : 0, MOVE = 0.9; hitPts = []; hitPts.cv = 'dspcv';
       if (!drop) { t = from ? t + ellT + ELL : 1e9; } // no drop: already landed
       var mv0 = from ? ellT + ELL : ellT + ELL + 0.35, mk = Math.max(0, Math.min(1, (t - mv0) / MOVE)), ez = mk < 0.5 ? 2 * mk * mk : 1 - Math.pow(-2 * mk + 2, 2) / 2;
       var sx = from ? from.x : pin.x, sy = from ? from.y : pin.y, ox = sx + (aim.x - sx) * ez - pin.x, oy = sy + (aim.y - sy) * ez - pin.y;
@@ -582,6 +610,7 @@
           else { var a = u - FALL; for (var j = 0; j < HOP.length; j++) { if (a < HOP[j][0]) { var z = a / HOP[j][0]; lift = 4 * z * (1 - z) * HOP[j][1]; break; } a -= HOP[j][0]; }
             if (lift > 0.3) { ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.arc(bx, by, bs * 0.8, 0, 7); ctx.fill(); } }
           ctx.fillStyle = gc.fill; ctx.strokeStyle = gc.edge; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(bx, by - lift, bs * sc, 0, 7); ctx.fill(); ctx.stroke();
+          if (q.rid) hitPts.push({ x: bx, y: by, p: q });
         });
       });
       // the flag on top of the balls

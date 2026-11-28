@@ -232,7 +232,7 @@
     var SGm = opts.SG, out = [], R = rng(4242), noDir = {}, why = { holes: 0, inGrid: 0, lie: 0, range: 0, noDir: 0, wild: 0, pen: 0, none: 0, nostats: 0 }; // v274: holes with a pin location – in the grid, or why not (by hole)
     (rounds || []).forEach(function (r) {
       if (!r || !Array.isArray(r.holes) || (opts.play === 'tournament' && r.play !== 'tournament')) return;
-      r.holes.forEach(function (h) { var hp = !!(h && h.pin); if (hp) why.holes++; if (h.nostats) { if (hp) why.nostats++; return; } /* v254: left out of stats */ var a; try { a = SGm.analyzeHole(h, opts.bl); } catch (e) { a = null; } if (!a || !a.shots) { if (hp) why.none++; return; } var pinK = a.pin || '', appr = 0, used = 0, first = '';
+      r.holes.forEach(function (h, hix) { var hp = !!(h && h.pin); if (hp) why.holes++; if (h.nostats) { if (hp) why.nostats++; return; } /* v254: left out of stats */ var a; try { a = SGm.analyzeHole(h, opts.bl); } catch (e) { a = null; } if (!a || !a.shots) { if (hp) why.none++; return; } var pinK = a.pin || '', appr = 0, used = 0, first = '';
         a.shots.forEach(function (x) {
           if (x.cat !== 'approach' || !x.start) return; appr++; var tw = function (k) { if (!first) first = k; };
           if (x.start.lie !== 'fairway' && x.start.lie !== 'tee') return tw('lie');
@@ -243,7 +243,8 @@
           if (d > 60) return tw('wild'); // a shank or a lay-up well short isn't part of the pattern around the pin
           var ang = holed ? 0 : ((x.ang == null ? 270 : x.ang) + (R() - 0.5) * 40) * Math.PI / 180;
           out.push({ yd: b, from: x.start.dist, dx: d * Math.cos(ang), dy: d * Math.sin(ang), on: holed || x.end.lie === 'green', sg: x.sg, dir: holed ? '' : x.dir, holed: holed,
-            ft: holed ? 0 : x.end.lie === 'green' ? x.end.dist : x.end.dist * 3, play: r.play === 'tournament' ? 'tournament' : 'practice', pin: pinK }); used++; // v248 pin = the hole's pin location (⛳), '' if not set
+            ft: holed ? 0 : x.end.lie === 'green' ? x.end.dist : x.end.dist * 3, play: r.play === 'tournament' ? 'tournament' : 'practice', pin: pinK,
+            rid: r.id, hole: hix, par: Number(h.par) || null, n: x.n, club: x.club || '', endLie: x.end.lie, endDist: x.end.dist }); used++; // v277: which shot it was, for tap → shot card → hole replay // v248 pin = the hole's pin location (⛳), '' if not set
         }); if (pinK) { if (used) why.inGrid++; else why[appr ? first : 'none']++; } });
     });
     out.noDir = noDir; out.why = why; return out;
