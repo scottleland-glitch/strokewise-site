@@ -362,3 +362,8 @@ html body .clubtab .p3tag { display: block; font-size: 10px; font-weight: 600; c
 .rnpager .mid { font-size: 13.5px; color: var(--soft); font-weight: 600; white-space: nowrap; }
 .btn.xs { padding: 6px 12px; font-size: 13px; font-weight: 600; border-width: 1.2px; }
 .rvpbar.gn u, .rvpkey .gn { background: #3f8f4f; } .rvprow em.gn { color: #2f7a3e; } .rvprow em.ls { color: #b5523f; }
+/* v274 (Scott: picked rounds showed black with unreadable text): the site's .appui button / button.sel rules outranked the picker's own */
+.appui button.dsprd { min-height: 44px; padding: 4px 8px; border-radius: 12px; border: 1.5px solid rgba(31, 45, 56, .18); background: rgba(255, 255, 255, .45); color: #1f2d38; box-shadow: none; }
+.appui button.dsprd.sel { border-color: #1f2d38; background: rgba(255, 255, 255, .85); color: #1f2d38; }
+.appui button.dspev { min-height: 48px; padding: 8px 12px; border-radius: 12px; border: 1.5px solid rgba(31, 45, 56, .2); background: rgba(255, 255, 255, .5); color: #1f2d38; box-shadow: none; }
+.appui button.dspev.sel { background: #1f2d38; border-color: #1f2d38; color: #fff; }
