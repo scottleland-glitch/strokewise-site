@@ -358,7 +358,9 @@
     }
     function dispersionPage(uid) {
       var ui = dspUI(uid); if (!ui) return empty('Dispersion isn’t available.');
-      return pageHead('Dispersion', 'Launch monitor shots by club (where the ball lands, which pins to attack, where to aim) or what actually happened in rounds by distance. Same screens as the app.', benchSelect(uid, ctx(uid).P)) + '<div class="apphost">' + panel(ui.html(), 'full disp') + '</div>';
+      // v273 (Scott): if the picture can't be drawn with the saved choices, start this page fresh (default view) rather than getting stuck on an error
+      var body; try { body = ui.html(); } catch (e) { if (window.console) console.error(e); try { localStorage.removeItem('golfsg.simopts.v1'); } catch (e2) {} DSPUI = null; ui = dspUI(uid); try { body = ui.html(); } catch (e3) { if (window.console) console.error(e3); return empty('Couldn’t draw the dispersion for these choices.'); } }
+      return pageHead('Dispersion', 'Launch monitor shots by club (where the ball lands, which pins to attack, where to aim) or what actually happened in rounds by distance. Same screens as the app.', benchSelect(uid, ctx(uid).P)) + '<div class="apphost">' + panel(body, 'full disp') + '</div>';
     }
     function dspAct(uid, act, v, el) { var ui = dspUI(uid); if (ui) ui.act(act, v, el); }
 
